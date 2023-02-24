@@ -12,7 +12,7 @@ import matplotlib
 
 def dfg(T):
     """
-    function for determination of Gibbs free energy of formation of a species @ T from NIST-JANAF tables by a polynomic fit, range of validity: 0 - 6000 K
+    function for determination of Gibbs free energy of formation of a species @ T from NIST-JANAF tables [1] by a polynomic fit, range of validity: 0 - 6000 K
 
     :param T: temperature in K
     :return: Gibbs free energy of formation in J / mol
@@ -35,7 +35,7 @@ def dfg(T):
 
 def phi_Soave(n, T, p):
     """
-    function for determination of fugacity coefficients of all gaseous species @ T, p from Soave-Redlich-Kwong Equation of State (Soave 1972, https://doi.org/10.1016/0009-2509(72)80096-4)
+    function for determination of fugacity coefficients of all gaseous species @ T, p from Soave-Redlich-Kwong Equation of State [2]
 
     :param T: temperature in K
     :param p: pressure in bar
@@ -46,9 +46,9 @@ def phi_Soave(n, T, p):
     # parameters
     R       = 8.314 # universal gas constant in J / mol K
     M_i     = np.array([0.044,  0.002, 0.016, 0.018,  0.028,  0.004,   0.040, 0.028]) # vector containing molar masses of CO2, H2, CH4, H2O, CO, He, Ar and N2 in kg / mol
-    omega_i = np.array([0.224, -0.215, 0.011, 0.343,  0.048, -0.388,   0.000, 0.037]) # vector containing acentric factors of CO2, H2, CH4, H2O, CO, He, Ar and N2 in 1
-    T_c_i   = np.array([304.2,  33.18, 190.6, 647.0, 134.45,    5.2,  150.86, 126.2]) # vector containing critical temperatures von CO2, H2, CH4, H2O, CO, He, Ar and N2 in K
-    p_c_i   = np.array([ 73.8,  13.00,  46.1, 220.6,     35,  2.274, 48.9805,  33.9]) # vector containing critical pressures von CO2, H2, CH4, H2O, CO, He, Ar and N2 in bar
+    omega_i = np.array([0.224, -0.215, 0.011, 0.343,  0.048, -0.388,   0.000, 0.037]) # vector containing acentric factors of CO2, H2, CH4, H2O, CO, He, Ar and N2 in 1 [3]
+    T_c_i   = np.array([304.2,  33.18, 190.6, 647.0, 134.45,    5.2,  150.86, 126.2]) # vector containing critical temperatures of CO2, H2, CH4, H2O, CO, He, Ar and N2 in K [3]
+    p_c_i   = np.array([ 73.8,  13.00,  46.1, 220.6,     35,  2.274, 48.9805,  33.9]) # vector containing critical pressures of CO2, H2, CH4, H2O, CO, He, Ar and N2 in bar [3]
     K_ij    = np.zeros([len(n_gas), len(n_gas)]) # matrix containing SRK Binary Interaction Parameters, rows and columns CO2, H2, CH4, H2O, CO, He, Ar and N2, respectively, in 1
 
     R_s_i = R / M_i               # vector containing specific gas constants of CO2, H2, CH4, H2O, CO, He, Ar and N2 in J / kg K
@@ -81,7 +81,7 @@ def phi_Soave(n, T, p):
 
 def g_T(n, T, p, type):
     """
-    function for determination of the total Gibbs free energy to be minimized
+    function for determination of the total Gibbs free energy to be minimized [3, 4]
 
     :param n: vector containing molar amounts of CO2, H2, CH4, H2O, CO, C, He, Ar and N2
     :param T: temperature in K
@@ -166,7 +166,7 @@ def element_balance(n, n0):
 
 cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
 
-# validation (Gao 2012, https://doi.org/10.1039/C2RA00632D)
+# validation [3]
 p = np.array([1.01325]) # p in bar
 T = np.linspace(200 + 273.15, 800 + 273.15, 25) # T in K
 type = 'real gas' # choose type of gas from 'ideal gas' and 'real gas'
@@ -193,7 +193,7 @@ for i in range(p.shape[0]):
 
             print(x[i, j], '(', T[j], ')')
 
-# data import - validation data
+# data import - validation data [3]
 csv_data_Gao = pd.read_csv('data_Gao_CO2.csv',  # read csv file
                            sep = ';')
 
@@ -234,3 +234,9 @@ axs.set_xlim(200, 800)
 plt.legend(bbox_to_anchor=(1,1), loc="upper left", fontsize = 8)
 plt.tight_layout()
 plt.show()
+
+# References
+# [1] T.C. Allison, NIST-JANAF Thermochemical Tables - SRD 13, 2013 (accessed 16 November 2022). https://doi.org/10.18434/T42S31
+# [2] G. Soave, Equilibrium constants from a modified Redlich-Kwong equation of state, Chemical Engineering Science 27 (1972) 1197–1203. https://doi.org/10.1016/0009-2509(72)80096-4.
+# [3] R.H. Perry (Ed.), Perry's chemical engineers' handbook, 7th ed., McGraw-Hill, Montréal, 1997.
+# [4] J. Gao, Y. Wang, Y. Ping, D. Hu, G. Xu, F. Gu, F. Su, A thermodynamic analysis of methanation reactions of carbon oxides for the production of synthetic natural gas, RSC Adv. 2 (2012) 2358. https://doi.org/10.1039/c2ra00632d
