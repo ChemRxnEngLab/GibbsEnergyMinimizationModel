@@ -1,7 +1,7 @@
 # Gibbs-Energy-Minimization
 
 ## Description
-The software represents an implementation of the Gibbs-energy minimization method [1, 2] to derive the equilibrium composition for reacting systems. Fugacity coefficients are calculated by Soave-Redlich-Kwong equation of state [3]. Acentric factors and critical properties are obtained from [2] and Gibbs free energy of formation data from [4].
+The software represents an implementation of the Gibbs free energy minimization method [1, 2] to derive the equilibrium composition for reacting systems. Fugacity coefficients are calculated by Soave-Redlich-Kwong equation of state [3]. Acentric factors and critical properties are obtained from [2] and Gibbs free energy of formation data from [4].
 
 ## Usage
 Details will be added.
