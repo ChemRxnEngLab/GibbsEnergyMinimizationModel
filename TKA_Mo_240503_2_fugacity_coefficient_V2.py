@@ -10,7 +10,7 @@ def phi_Soave(y, T, p):
     """
     function for calculation of fugacity coefficients @ T, p from Soave-Redlich-Kwong-equation of state according to 1972 (doi.org/10.1016/0009-2509(72)80096-4)
 
-    :param y: array containing molar fractions in gas phase of CO2, H2, CH4, H2O, CO, He, Ar and N2 in mol
+    :param y: array containing molar fractions in gas phase of CO2, H2, CH4, H2O, CO, He, Ar and N2 in 1
     :param T: temperature in K
     :param p: pressure in Pa
     :return: fugacity coefficients of CO2, H2, CH4, H2O, CO, He, Ar and N2 @ T, p in 1
