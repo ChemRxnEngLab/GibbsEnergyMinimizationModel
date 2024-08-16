@@ -131,13 +131,14 @@ def equilibrium_composition_methanation_moles(T,p,x0,type='ideal gas'):
     p = np.atleast_1d(p)*1e-5 # in bar
 
     if x0.shape[0] < 9:
-        for i in range(9-len(x0)):
+        for __ in range(9-len(x0)):
             x0 = np.append(x0,1e-20)
 
     n0,bnds,init = calc_bounds(x0)
     cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
 
     x = np.ones([p.shape[0], T.shape[0], n0.shape[0]])
+    n = np.ones([p.shape[0], T.shape[0], n0.shape[0]])
     success_store = np.full([p.shape[0], T.shape[0]],False,dtype=bool)
 
     once_false = 0
@@ -152,24 +153,23 @@ def equilibrium_composition_methanation_moles(T,p,x0,type='ideal gas'):
             else:
                 sol = minimize(g_T, init, args=(T[TT], p[pp], type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-12})
                 success_store[pp,TT] = sol.success
-                n = sol.x
-                x[pp, TT] = n / np.sum(n)
+                n[pp, TT]  = sol.x
+                x[pp, TT] = sol.x / np.sum(sol.x)
                 # print(sol.success)
-                if round(np.sum(n / np.sum(n)), 5) != 1:
+                if round(np.sum(sol.x / np.sum(sol.x)), 5) != 1:
                     print('Error at ', p, 'bar and ', T, 'K!')
                 if sol.success == False:
                     once_false += 1
                     sol = minimize(g_T, x[pp, TT - 1], args=(T[TT], p[pp], type), method='SLSQP', bounds=bnds, constraints=cons, options={'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
-                    n = sol.x
                     success_store[pp,TT] = sol.success
                     if sol.success == False:
                         twice_false += 1
                         sol = minimize(g_T, x[pp, TT - 2], args=(T[TT], p[pp], type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-12})
                         success_store[pp,TT] = sol.success
-                        n = sol.x
-                        x[pp, TT] = n / np.sum(n)
+                        x[pp, TT] = sol.x / np.sum(sol.x)
                     else:
-                        x[pp, TT] = n / np.sum(n)
+                        n[pp, TT] = sol.x
+                        x[pp, TT] = sol.x / np.sum(sol.x)
 
                     print(sol.success)
     
@@ -213,17 +213,17 @@ if __name__ == '__main__':
     ## Test the model by verification with data from Gao
 
     ## validation (Gao 2012, https://doi.org/10.1039/C2RA00632D)
-    p = np.array([1*1.01325,2])*1e5 # p in Pa
-    T = np.linspace(200 + 273.15, 800 + 273.15, 10) # T in K
+    p = np.array([1*1.01325])*1e5 # p in Pa
+    T = np.linspace(200 + 273.15, 800 + 273.15, 100) # T in K
     type = 'ideal gas' # choose type of gas from 'ideal gas' and 'real gas'
 
     # Parameter
     x0 = np.empty(9)
-    x0[0] = 0.1       # initial mole fraction of CO2
-    x0[1] = 0.5-3e-20 # initial mole fraction of H2
-    x0[2] = 0.1     # initial mole fraction of CH4
-    x0[3] = 0.1     # initial mole fraction of H2O
-    x0[4] = 0.2     # initial mole fraction of CO
+    x0[0] = 0.2       # initial mole fraction of CO2
+    x0[1] = 0.8-7e-20 # initial mole fraction of H2
+    x0[2] = 1e-20     # initial mole fraction of CH4
+    x0[3] = 1e-20     # initial mole fraction of H2O
+    x0[4] = 1e-20     # initial mole fraction of CO
     x0[5] = 1e-20     # initial mole fraction of C
     x0[6] = 1e-20     # initial mole fraction of He
     x0[7] = 1e-20     # initial mole fraction of Ar
