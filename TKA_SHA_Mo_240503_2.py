@@ -46,7 +46,7 @@ def g_T(n, T, p, type):
             n[i] = 1e-20
 
     n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO, He, Ar and N2) in mol
-    n_sol = n_gas[5] # array containing only the amounts of substance of solid species (C)
+    n_sol = n[5] # array containing only the amounts of substance of solid species (C)
 
     y_gas = n_gas / np.sum(n_gas) # array containing gas phase molar fractions of gaseous species
     x_sol = n_sol / np.sum(n_sol) # array containing solid phase molar fractions of solid species
