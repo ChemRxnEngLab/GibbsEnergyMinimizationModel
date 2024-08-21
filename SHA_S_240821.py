@@ -1,4 +1,4 @@
-# Modell TKA_Mo_240503_1_(MethT_V11)
+# Modell TKA_SHA_Mo_240503_2 (MethT_V11)
 # calculation of methanation chemical equilibrium by Gibbs energy minimization
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 
@@ -9,7 +9,8 @@ import pandas as pd
 from ICIW_Plots import cyclers as ICIW_cyclers
 import matplotlib
 
-from TKA_SHA_Mo_240503_2 import equilibrium_composition_methanation_moles
+## import the model (MethT_V11)
+from TKA_SHA_Mo_240503_2 import equilibrium_composition_methanation
 
 ## Test the model by verification with data from Gao
 
@@ -30,7 +31,7 @@ x0[6] = 1e-20     # initial mole fraction of He
 x0[7] = 1e-20     # initial mole fraction of Ar
 x0[8] = 1e-20     # initial mole fraction of N2
 
-x,n = equilibrium_composition_methanation_moles(T,p,x0,type=type)
+x,n = equilibrium_composition_methanation(T,p,x0,type=type)
 
 ## data import - validation data
 csv_data_Gao = pd.read_csv(r'data_Gao_CO2.csv',  # read csv file
