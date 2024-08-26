@@ -198,3 +198,36 @@ def equilibrium_composition_methanation(T,p,x0,type='ideal gas'):
     print('---------------------------------\n')
 
     return x,n
+
+def calc_eq_methanation(T,p,x0,guess,type='real gas'):
+    '''
+    Calculates the equilibrium composition of a gas mixture at one given temperature and pressure.
+
+    Parameters
+    ----------
+        T: temperature in K (float)
+        p: pressure in Pa (float)
+        x0: inlet composition [CO2 H2 CH4 H2O CO C He Ar N2]
+        guess: initial guess for the equilibrium composition for the minimization
+        type: type of gas, choose from 'ideal gas' or 'real gas'
+
+    Returns
+    -------
+        x_eq: equilibrium composition [CO2 H2 CH4 H2O CO C He Ar N2]
+        success: boolean, True if the minimization was successful, False otherwise
+
+    '''
+
+    n0,bnds,_ = calc_bounds(x0)
+    cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
+
+    if round(np.sum(x0),5) != 1:
+        ## Warning
+        print(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
+
+
+    sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-12})
+    success = sol.success
+    x_eq = sol.x / np.sum(sol.x)  
+
+    return x_eq,success
