@@ -5,6 +5,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+import warnings
 
 
 def dfg(T):
@@ -223,7 +224,7 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
 
     if round(np.sum(x0),5) != 1:
         ## Warning
-        print(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
+        warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
 
 
     sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-12})
