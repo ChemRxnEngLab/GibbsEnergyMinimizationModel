@@ -218,6 +218,7 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
         success: boolean, True if the minimization was successful, False otherwise
 
     '''
+    p = p*1e-5 # in bar
 
     n0,bnds,_ = calc_bounds(x0)
     cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
@@ -227,7 +228,7 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
         warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
 
 
-    sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-12})
+    sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
     success = sol.success
     x_eq = sol.x / np.sum(sol.x)  
 
