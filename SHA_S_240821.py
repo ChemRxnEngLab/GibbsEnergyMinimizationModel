@@ -10,7 +10,7 @@ from ICIW_Plots import cyclers as ICIW_cyclers
 import matplotlib
 
 ## import the model (MethT_V11)
-from TKA_SHA_Mo_240503_2 import equilibrium_composition_methanation
+from TKA_SHA_Mo_240503_2 import equilibrium_composition_methanation,calc_eq_methanation
 
 ## Test the model by verification with data from Gao
 
@@ -31,7 +31,27 @@ x0[6] = 1e-20     # initial mole fraction of He
 x0[7] = 1e-20     # initial mole fraction of Ar
 x0[8] = 1e-20     # initial mole fraction of N2
 
-x,n = equilibrium_composition_methanation(T,p,x0,type=type)
+## Old calculation
+# x,n = equilibrium_composition_methanation(T,p,x0,type=type)
+
+## New calculation
+x_eq = np.empty((len(T),9))
+success = []
+not_converged = 0
+guess = x0
+for TT in range(len(T)):
+    x_eq_temp,success_temp = calc_eq_methanation(T[TT],p[0],x0,guess=guess,type=type)    
+    if success_temp:
+        x_eq[TT,:] = x_eq_temp
+        guess = x_eq_temp
+    else:  
+        x_eq[TT,:] = np.nan
+    success.append(success_temp)
+    if success_temp == False:
+        not_converged +=1
+x = x_eq
+print(f'\nConverged calculations: {(len(T)-not_converged)/len(T):.0%} ({len(T) - not_converged}/{len(T)})')
+
 
 ## data import - validation data
 csv_data_Gao = pd.read_csv(r'data_Gao_CO2.csv',  # read csv file
@@ -49,18 +69,16 @@ matplotlib.rc('font', **font)
 
 ## CO2 methanation
 fig, axs = plt.subplots()
-for pp in range(p.shape[0]):
-    cyc1 = ICIW_cyclers.ICIW_colormap_cycler('hsv', 9, start = 0.1, stop = 1)
-    axs.set_prop_cycle(cyc1)
-    axs.plot(T - 273.15,  x[pp, :, 0],     '-',                 label = 'CO$_2$')
-    axs.plot(T - 273.15,  x[pp, :, 1],     '-',                 label = 'H$_2$')
-    axs.plot(T - 273.15,  x[pp, :, 2],     '-',                 label = 'CH$_4$')
-    axs.plot(T - 273.15,  x[pp, :, 3],     '-',                 label = 'H$_2$O')
-    axs.plot(T - 273.15,  x[pp, :, 4],     '-',                 label = 'CO')
-    axs.plot(T - 273.15,  x[pp, :, 5],     '-',                 label = 'C')
-    axs.plot(T - 273.15,  x[pp, :, 6],     '-',                 label = 'He')
-    axs.plot(T - 273.15,  x[pp, :, 7],     '-',                 label = 'Ar')
-    axs.plot(T - 273.15,  x[pp, :, 8],     '-',                 label = 'N$_2$')
+
+axs.plot(T - 273.15,  x[:, 0],     '-',                 label = 'CO$_2$')
+axs.plot(T - 273.15,  x[:, 1],     '-',                 label = 'H$_2$')
+axs.plot(T - 273.15,  x[:, 2],     '-',                 label = 'CH$_4$')
+axs.plot(T - 273.15,  x[:, 3],     '-',                 label = 'H$_2$O')
+axs.plot(T - 273.15,  x[:, 4],     '-',                 label = 'CO')
+axs.plot(T - 273.15,  x[:, 5],     '-',                 label = 'C')
+axs.plot(T - 273.15,  x[:, 6],     '-',                 label = 'He')
+axs.plot(T - 273.15,  x[:, 7],     '-',                 label = 'Ar')
+axs.plot(T - 273.15,  x[:, 8],     '-',                 label = 'N$_2$')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 0], 'o', markersize = 3, label = 'CO$_2$ (Gao)')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 1], 'o', markersize = 3, label = 'H$_2$ (Gao)')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 2], 'o', markersize = 3, label = 'CH$_4$ (Gao)')
