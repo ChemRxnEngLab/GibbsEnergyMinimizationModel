@@ -3,7 +3,7 @@
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, basinhopping, differential_evolution, dual_annealing, shgo
 from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
 import warnings
 
@@ -105,7 +105,7 @@ def calc_bounds(x0):
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
     max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, np.inf))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, np.inf)) # was np.inf
     init = np.ones_like(n0)
     return n0,bnds,init
 
@@ -228,8 +228,27 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
         warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
 
 
-    sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
+    #sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
+    minimizer_kwargs = {
+        "method": "SLSQP", # SLSQP 
+        "bounds": bnds, 
+        "constraints": cons, 
+        "args": (T, p, type),
+        "options": {'disp': False, 'maxiter': 500, 'ftol': 1e-5}
+    }
+
+    sol = basinhopping(
+        g_T, 
+        guess, 
+        minimizer_kwargs=minimizer_kwargs, 
+        niter=50,              
+        T=1.0,               
+        stepsize=0.5,        
+        disp=False, 
+    )
+
+    
     success = sol.success
-    x_eq = sol.x / np.sum(sol.x)  
+    x_eq = sol.x / np.sum(sol.x) 
 
     return x_eq,success

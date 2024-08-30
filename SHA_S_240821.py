@@ -54,9 +54,8 @@ print(f'\nConverged calculations: {(len(T)-not_converged)/len(T):.0%} ({len(T) -
 
 
 ## data import - validation data
-csv_data_Gao = pd.read_csv(r'data_Gao_CO2.csv',  # read csv file
+csv_data_Gao = pd.read_csv(r'gibbsenergyminimizationmodel/data_Gao_CO2.csv',  # read csv file
                             sep = ';')
-
 ## convert read data into numpy array
 data_Gao         = csv_data_Gao.to_numpy()
 
