@@ -97,17 +97,18 @@ def calc_bounds(x0):
     max_O   = 2 * n0[0] + n0[3] + n0[4]         # molar amount of oxygen in the system in mol
     max_He  = n0[6]                             # molar amount of helium in the system in mol
     max_Ar  = n0[7]                             # molar amount of argon in the system in mol
-    max_N   = n0[8]                             # molar amount of nitrogen in the system
+    max_N   = 2 * n0[8] #n0[8]                             # molar amount of nitrogen in the system
     max_CO2 = min(max_C, 0.5 * max_O)           # maximum possible molar amount of CO2 in mol
     max_H2  = 0.5 * max_H                       # maximum possible molar amount of H2 in mol
     max_CH4 = min(max_C, 0.25 * max_H)          # maximum possible molar amount of CH4 in mol
     max_H2O = min(0.5 * max_H, max_O)           # maximum possible molar amount of H2O in mol
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
-    max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
+    max_N2  = 0.5 * max_N #was0.5                      # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, np.inf)) # was np.inf
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, max_N2)) # was np.inf
     init = np.ones_like(n0)
-    return n0,bnds,init
+    
+    return n0,bnds,init 
 
 def equilibrium_composition_methanation(T,p,x0,type='ideal gas'):
     '''
@@ -227,14 +228,14 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
         ## Warning
         warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
 
-
-    sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', bounds=bnds, constraints = cons, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
-    '''minimizer_kwargs = {
+    #sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
+    
+    minimizer_kwargs = {
         "method": "SLSQP", # SLSQP 
         "bounds": bnds, 
         "constraints": cons, 
         "args": (T, p, type),
-        "options": {'disp': False, 'maxiter': 500, 'ftol': 1e-5}
+        "options": {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}
     }
 
     sol = basinhopping(
@@ -245,8 +246,7 @@ def calc_eq_methanation(T,p,x0,guess,type='real gas'):
         T=1.0,               
         stepsize=0.5,        
         disp=False, 
-    )'''
-
+    )
     
     success = sol.success
     x_eq = sol.x / np.sum(sol.x) 
