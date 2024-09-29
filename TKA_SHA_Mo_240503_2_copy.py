@@ -6,6 +6,8 @@ import numpy as np
 from scipy.optimize import minimize
 from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
 import warnings
+import scipy.constants as csts
+from scipy.integrate import quad
 
 
 def dfg(T):
@@ -104,6 +106,272 @@ def calc_bounds(x0):
     
     return n0,bnds,init 
 
+Shomate_coeffs_CO2 = { # 298 - 1200 K
+    "A": 24.997,
+    "B": 55.187,
+    "C": -33.691,
+    "D": 7.948,
+    "E": -0.137,
+    "F": -403.608,
+    "G": 228.243,
+    "H": -393.522,
+}
+
+Shomate_coeffs_H2 = { # 298 - 1000 K
+    "A": 33.066,
+    "B": -11.363,
+    "C": 11.433,
+    "D": -2.772,
+    "E": -0.159,
+    "F": -9.981,
+    "G": 172.708,
+    "H": 0,
+}
+
+Shomate_coeffs_H2O = { # 500 - 1700 K
+    "A": 30.092,
+    "B": 6.833,
+    "C": 6.793,
+    "D": -2.534,
+    "E": 0.082,
+    "F": -250.881,
+    "G": 223.397,
+    "H": -241.826,
+}
+
+Shomate_coeffs_CO = { # 298 - 1300 K
+    "A": 25.568,
+    "B": 6.096,
+    "C": 4.055,
+    "D": -2.671,
+    "E": 0.131,
+    "F": -118.009,
+    "G": 227.367,
+    "H": -110.527,
+}
+
+Shomate_coeffs_CH4 = { # 298 - 1300 K
+    "A": -0.703029,
+    "B": 108.4773,
+    "C": -42.52157,
+    "D": 5.862788,
+    "E": 0.678565,
+    "F": -76.84376,
+    "G": 158.7163,
+    "H": -74.8731,
+}
+
+Glenn_coeffs_H2O = { # 200 - 1000 K
+    "a_1": -3.948 * 1e4,
+    "a_2": 5.756 * 1e2,
+    "a_3": 9.318 * 1e-1,
+    "a_4": 7.223 * 1e-3,
+    "a_5": -7.343 * 1e-6,
+    "a_6": 4.955 * 1e-9,
+    "a_7": -1.337 * 1e-12,
+    "b_1": -3.304 * 1e4,
+    "b_2": 1.724 * 1e1,
+}
+
+coeffs_C = {
+    "c_p": 10.68 # constant c_p for solid carbon
+}
+
+def c_p(T, coeffs):
+    """
+    function calculates the heat capacity of a compound at a given temperature
+    :param T: temperature in K
+    :param coeffs: dictionary of Shomate coefficients
+    :return: heat capacity of the compound at the given temperature
+    """
+    
+    t = T / 1000
+    
+    if "A" in coeffs:
+        c_p_comp = coeffs["A"] + coeffs["B"] * t + coeffs["C"] * t**2 + coeffs["D"] * t**3 + coeffs["E"] / t**2
+    elif "a_1" in coeffs:
+        c_p_comp = csts.R * (coeffs["a_1"] / T ** 2 + coeffs["a_2"] / T + coeffs["a_3"] + coeffs["a_4"] * T + coeffs["a_5"] * T**2 + coeffs["a_6"] * T**3 + coeffs["a_7"] * T**4)
+    else:
+        c_p_comp = coeffs["c_p"] # calculation for carbon
+    
+    return c_p_comp 
+
+def c_p_R(T, reaction):
+    """
+    function calculates the heat capacity of the reaction at a given temperature
+    :param T: temperature in K
+    :param reaction: string of the reaction
+    :return: heat capacity of the reaction at the given temperature
+    """
+
+    c_p_CO2 = c_p(T, Shomate_coeffs_CO2)
+    c_p_H2 = c_p(T, Shomate_coeffs_H2)
+    c_p_H2O = c_p(T, Glenn_coeffs_H2O)
+    c_p_CO = c_p(T, Shomate_coeffs_CO)
+    c_p_CH4 = c_p(T, Shomate_coeffs_CH4)
+    c_p_C = c_p(T, coeffs_C)
+
+    if reaction == 'CO2 methanation':
+        c_p_R = c_p_CH4 + 2 * c_p_H2O - c_p_CO2 - 4 * c_p_H2
+    elif reaction == 'CO methanation':
+        c_p_R = c_p_CH4 + c_p_H2O - c_p_CO - 3 * c_p_H2
+    elif reaction == 'WGS':
+        c_p_R = c_p_CO2 + c_p_H2 - c_p_CO - c_p_H2O
+    elif reaction == 'Inversed Methane CO2 reforming':
+        c_p_R = c_p_CO2 + c_p_CH4 - 2 * c_p_CO - 2 * c_p_H2
+    elif reaction == 'Boudouard reaction':
+        c_p_R = c_p_CO2 + c_p_C - 2 * c_p_CO
+    elif reaction == 'Methane cracking':
+        c_p_R = 2 * c_p_H2 + c_p_C - c_p_CH4
+    elif reaction == 'Carbon monoxide reduction':
+        c_p_R = c_p_C + c_p_H2O - c_p_CO - c_p_H2
+    elif reaction == 'Carbon dioxide reduction':
+        c_p_R = c_p_C + 2 * c_p_H2O - c_p_CO2 - 2 * c_p_H2
+
+
+    return c_p_R
+
+def Thermo_props_ref(reaction):
+    """
+    function calculates the standard enthalpy and entropy of the reaction at 298.15 K
+    :param reaction: string of the reaction
+    :return: standard enthalpy and entropy of the reaction at 298.15 K
+    """
+
+    dfH0_CH4 = Shomate_coeffs_CH4["H"] * 1000
+    dfH0_CO2 = Shomate_coeffs_CO2["H"] * 1000
+    dfH0_H2 = 0 #Shomate_coeffs_H2["H"] * 1000
+    dfH0_CO = Shomate_coeffs_CO["H"] * 1000
+    dfH0_H2O = Shomate_coeffs_H2O["H"] * 1000
+    dfH0_C = 0
+
+    dS0_CO2, dS0_H2, dS0_CO, dS0_H2O, dS0_CH4, dS0_C = 213.785, 130.68, 197.66, 188.84, 186.25, 6.201
+
+    if reaction == 'CO2 methanation':
+        dH0 = dfH0_CH4 + 2 * dfH0_H2O - dfH0_CO2 - 4 * dfH0_H2
+        dS0 = dS0_CH4 + 2 * dS0_H2O - dS0_CO2 - 4 * dS0_H2
+    elif reaction == 'CO methanation':
+        dH0 = dfH0_CH4 + dfH0_H2O - dfH0_CO - 3 * dfH0_H2
+        dS0 = dS0_CH4 + dS0_H2O - dS0_CO - 3 * dS0_H2
+    elif reaction == 'WGS':
+        dH0 = dfH0_CO2 + dfH0_H2 - dfH0_CO - dfH0_H2O
+        dS0 = dS0_CO2 + dS0_H2 - dS0_CO - dS0_H2O
+    elif reaction == 'Inversed Methane CO2 reforming':
+        dH0 = dfH0_CO2 + dfH0_CH4 - 2 * dfH0_CO - 2 * dfH0_H2
+        dS0 = dS0_CO2 + dS0_CH4 - 2 * dS0_CO - 2 * dS0_H2
+    elif reaction == 'Boudouard reaction':
+        dH0 = dfH0_CO2 + dfH0_C - 2 * dfH0_CO
+        dS0 = dS0_CO2 + dS0_C - 2 * dS0_CO
+    elif reaction == 'Methane cracking':
+        dH0 = 2 * dfH0_H2 + dfH0_C - dfH0_CH4
+        dS0 = 2 * dS0_H2 + dS0_C - dS0_CH4  
+    elif reaction == 'Carbon monoxide reduction':
+        dH0 = dfH0_C + dfH0_H2O - dfH0_CO - dfH0_H2
+        dS0 = dS0_C + dS0_H2O - dS0_CO - dS0_H2
+    elif reaction == 'Carbon dioxide reduction':
+        dH0 = dfH0_C + 2 * dfH0_H2O - dfH0_CO2 - 2 * dfH0_H2
+        dS0 = dS0_C + 2 * dS0_H2O - dS0_CO2 - 2 * dS0_H2
+
+    return dH0, dS0
+
+def dRH(T, reaction):
+    """
+    function calculates the enthalpy of the reaction at a given temperature
+    :param T: temperature in K
+    :param reaction: string of the reaction
+    :return: enthalpy of the reaction at the given temperature
+    """
+    # reaction enthalpy at 298.15 K
+    dH0 = Thermo_props_ref(reaction)[0]
+    # integral of the heat capacity of the reaction
+    def integrand(T_prime):
+        return c_p_R(T_prime, reaction)
+    # enthalpy of the reaction at the given temperature
+    dRH = dH0 + quad(integrand, 298.15, T)[0]
+
+    return dRH
+
+def lnK0(reaction):
+    """
+    function calculates the logarithm of equilibrium constant of the reaction at 298.15 K
+    :param reaction: string of the reaction
+    :return: logarithm of equilibrium constant of the reaction at 298.15 K
+    """
+    T_ref = 298.15
+    dH0, dS0 =  Thermo_props_ref(reaction)
+    dG0 = dH0 - T_ref * dS0
+    lnK0_ref = -dG0 / (csts.R * T_ref)
+
+    return lnK0_ref
+
+def K0(T, reaction):
+
+    # Calculate ln(K0) at the reference temperature (298.15 K)
+    lnK0_ref = lnK0(reaction)
+    
+    # Define the integrand for the Van't Hoff equation
+    def integrand(T_prime):
+        dRH_T_prime = dRH(T_prime, reaction)
+        return dRH_T_prime / (csts.R * T_prime**2)
+    # Perform the integration from 298.15 K to the desired temperature T
+    integral_value, _ = quad(integrand, 298.15, T)
+    # Calculate ln(K0(T)) using the Van't Hoff equation
+    lnK0_T = lnK0_ref + integral_value
+    # Calculate K0(T)
+    K0_T = np.exp(lnK0_T)
+
+    return K0_T
+
+def check_eq_consts(T, p, y_GG, reaction):
+    """
+    function calculates the equilibrium constant of the reaction at a given temperature and pressure using Gibbs energy minimization model and Van't Hoff equation
+    :param T: temperature in K
+    :param p: pressure in Pa
+    :param y_GG: molar fractions of all species in equilibrium calculated by Gibbs energy minimization model
+    :param reaction: string of the reaction
+    :param type: type of the gas (ideal or real)
+    :return: equilibrium constant of the reaction calculated by Gibbs energy minimization model and Van't Hoff equation
+    """
+
+    p_bar = p * 1e-5 # p to bar for calculation of K_x pressure dependency bc p0 = 1 bar
+    y_GG_fug_coeffs = np.delete(y_GG, 5) # removing C from the list  
+    fug_coeffs = phi_Soave(y_GG_fug_coeffs, T, p) # calculating fugacity coefficients
+
+    # set y_GG to at least 1e-20 to avoid division by zero
+    for i in range(len(y_GG)):
+        if y_GG[i] < 1e-20:
+            y_GG[i] = 1e-20 # set to 1e-20 to avoid division by zero
+    
+    # calculating K_0 via Gibbs energy minimization model and Van't Hoff equation
+    if reaction == 'CO2 methanation':
+        K_0_sim = (y_GG[2] * y_GG[3] ** 2) / (y_GG[0] * y_GG[1] ** 4) / p_bar ** 2 * (fug_coeffs[2] * fug_coeffs[3]**2) / (fug_coeffs[0] * fug_coeffs[1]**4)
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'CO methanation':
+        K_0_sim = (y_GG[2] * y_GG[3]) / (y_GG[4] * y_GG[1] ** 3) / p_bar**2 * (fug_coeffs[2] * fug_coeffs[3]) / (fug_coeffs[4] * fug_coeffs[1] ** 3)
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'WGS':
+        K_0_sim = (y_GG[0] * y_GG[1]) / (y_GG[3] * y_GG[4]) * (fug_coeffs[0] * fug_coeffs[1]) / (fug_coeffs[3] * fug_coeffs[4])
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'Inversed Methane CO2 reforming':
+        K_0_sim = (y_GG[2] * y_GG[0]) / (y_GG[4]**2 * y_GG[1]**2) / p_bar ** 2 * (fug_coeffs[2] * fug_coeffs[0]) / (fug_coeffs[4]**2 * fug_coeffs[1]**2)
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'Boudouard reaction':
+        K_0_sim = y_GG[0] / y_GG[4]**2 / p_bar * fug_coeffs[0] / fug_coeffs[4]**2
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'Methane cracking':
+        K_0_sim = y_GG[1]**2 / y_GG[2] * p_bar * fug_coeffs[1]**2 / fug_coeffs[2]
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'Carbon monoxide reduction': 
+        K_0_sim = y_GG[3] / (y_GG[4] * y_GG[1]) / p_bar * fug_coeffs[3] / (fug_coeffs[4] * fug_coeffs[1])
+        K_0_vantHoff = K0(T, reaction)
+    elif reaction == 'Carbon dioxide reduction':
+        K_0_sim = y_GG[3]**2 / (y_GG[0] * y_GG[1]**2) / p_bar * (fug_coeffs[3]**2) / (fug_coeffs[0] * fug_coeffs[1]**2)
+        K_0_vantHoff = K0(T, reaction)
+    else:
+        raise ValueError('Reaction not found') 
+
+    return K_0_sim, K_0_vantHoff
+
 def calc_eq_methanation(T,p,x0,type='real gas'):
     '''
     Calculates the equilibrium composition of a gas mixture at one given temperature and pressure.
@@ -140,20 +408,39 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
 
     for i, guess in enumerate(guesses):
 
-        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
+        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
         if sol.success:
             g_T_vals[i] = sol.fun
-            success = True
             x_eq_vals[i, :] = sol.x / np.sum(sol.x)
         else:
             g_T_vals[i] = np.nan
-            success = False
             x_eq_vals[i, :] = np.nan
 
     # now find the minimum g_T_value and respective x_eq
     min_idx = np.nanargmin(g_T_vals)
-    g_T_value = g_T_vals[min_idx]
     x_eq = x_eq_vals[min_idx,:]
 
-    return x_eq, success, g_T_value, random_guess
+    summed_K0_percentage_deviation = 0
+    # check if the equilibrium constants are consistent
+    for reaction in ['CO2 methanation', 'CO methanation', 'WGS', 'Inversed Methane CO2 reforming', 'Boudouard reaction', 'Methane cracking', 'Carbon monoxide reduction', 'Carbon dioxide reduction']:
+        K_0_sim, K_0_vantHoff = check_eq_consts(T, p*1e5, x_eq, reaction)
+        K0_percentage_deviation = 100 * (K_0_sim - K_0_vantHoff) / K_0_vantHoff
+        summed_K0_percentage_deviation += abs(K0_percentage_deviation)
+
+    # check if the equilibrium constants are consistent
+    if T < 300+273.15:
+        if summed_K0_percentage_deviation > 500:
+            x_eq_vals = np.nan
+    elif 300+273.15 <= T < 600+273.15:
+        if summed_K0_percentage_deviation > 2500:
+            x_eq_vals = np.nan
+    else:
+        if summed_K0_percentage_deviation > 5000:
+            x_eq_vals = np.nan
+
+    # return p, T, x0, x_eq if successful else return only NaN
+    if x_eq_vals is not np.nan:
+        return p, T, x0, x_eq
+    else:
+        return np.nan, np.nan, np.nan, np.nan

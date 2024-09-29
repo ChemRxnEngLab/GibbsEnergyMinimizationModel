@@ -3,7 +3,7 @@
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 
 import numpy as np
-from scipy.optimize import minimize, basinhopping, differential_evolution, dual_annealing, shgo
+from scipy.optimize import minimize
 from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
 import warnings
 
@@ -22,8 +22,6 @@ def dfg(T):
                       [                    0, 1.02813542552485e-13,  -1.46197827311474e-9, 7.46216055871485e-6,  4.27766908921636e-2, -2.41321516149705e2],  # H2O
                       [                    0,                    0,                     0, 1.60737136748171e-6, -9.02786221059026e-2, -1.11442697976118e2],  # CO
                       [                    0,                    0,                     0,                   0,                    0,                   0],  # C
-                      [                    0,                    0,                     0,                   0,                    0,                   0],  # He
-                      [                    0,                    0,                     0,                   0,                    0,                   0],  # Ar
                       [                    0,                    0,                     0,                   0,                    0,                   0]]) # N2
 
     T_poly = np.array([T**5, T**4, T**3, T**2, T, 1])
@@ -36,7 +34,7 @@ def g_T(n, T, p, type):
     """
     function for determination of the total Gibbs free energy to be minimized
 
-    :param n: vector containing molar amounts of CO2, H2, CH4, H2O, CO, C, He, Ar and N2
+    :param n: vector containing molar amounts of CO2, H2, CH4, H2O, CO, C and N2
     :param T: temperature in K
     :param p: pressure in bar
     :return: total Gibbs free energy in J / mol
@@ -78,15 +76,13 @@ def element_balance(n, n0):
     :return: residual -> 0
     """
     # element-species matrix (C, O, H, He, Ar, N)
-    A = np.array([[1, 2, 0, 0, 0, 0],  # CO2
-                  [0, 0, 2, 0, 0, 0],  # H2
-                  [1, 0, 4, 0, 0, 0],  # CH4
-                  [0, 1, 2, 0, 0, 0],  # H2O
-                  [1, 1, 0, 0, 0, 0],  # CO
-                  [1, 0, 0, 0, 0, 0],  # C
-                  [0, 0, 0, 1, 0, 0],  # He
-                  [0, 0, 0, 0, 1, 0],  # Ar
-                  [0, 0, 0, 0, 0, 2]]) # N2
+    A = np.array([[1, 2, 0, 0],  # CO2
+                  [0, 0, 2, 0],  # H2
+                  [1, 0, 4, 0],  # CH4
+                  [0, 1, 2, 0],  # H2O
+                  [1, 1, 0, 0],  # CO
+                  [1, 0, 0, 0],  # C
+                  [0, 0, 0, 2]]) # N2
     res = np.matmul(n, A) - np.matmul(n0, A)
     return res
 
@@ -95,17 +91,15 @@ def calc_bounds(x0):
     max_C   = n0[0] + n0[2] + n0[4] + n0[5]     # molar amount of carbon in the system in mol
     max_H   = 2 * n0[1] + 4 * n0[2] + 2 * n0[3] # molar amount of hydrogen in the system in mol
     max_O   = 2 * n0[0] + n0[3] + n0[4]         # molar amount of oxygen in the system in mol
-    max_He  = n0[6]                             # molar amount of helium in the system in mol
-    max_Ar  = n0[7]                             # molar amount of argon in the system in mol
-    max_N   = 2 * n0[8] #n0[8]                  # molar amount of nitrogen in the system
+    max_N   = 2 * n0[6]                         # molar amount of nitrogen in the system
     max_CO2 = min(max_C, 0.5 * max_O)           # maximum possible molar amount of CO2 in mol
     max_H2  = 0.5 * max_H                       # maximum possible molar amount of H2 in mol
     max_CH4 = min(max_C, 0.25 * max_H)          # maximum possible molar amount of CH4 in mol
     max_H2O = min(0.5 * max_H, max_O)           # maximum possible molar amount of H2O in mol
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
-    max_N2  = 0.5 * max_N #was0.5               # maximum possible molar amount of N2 in mol
+    max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, max_N2)) # was np.inf instead of max_N2
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_N2))
     init = np.ones_like(n0)
     
     return n0,bnds,init 
@@ -229,20 +223,14 @@ def calc_eq_methanation(T,p,x0,type='real gas'): # removed guess
         warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
 
     # use 3 different guesses for the minimization
-    guesses = [x0, np.ones_like(x0), generate_random_composition()[0], generate_random_composition()[1], generate_random_composition()[2]]
+    guesses = [x0, np.ones_like(x0), np.random.dirichlet(np.ones(len(x0)))]
 
     g_T_vals = np.zeros(len(guesses))
     x_eq_vals = np.zeros([len(guesses),len(x0)])
 
     for i, guess in enumerate(guesses):
-        #print(guess)
 
-        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': 'False', 'maxiter': 1000, 'ftol': 1e-5})
-        
-        ## also return g_T_value
-        #g_T_vals[i] = sol.fun
-        #success = sol.success
-        #x_eq = sol.x / np.sum(sol.x)
+        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
         if sol.success:
             g_T_vals[i] = sol.fun
@@ -253,27 +241,9 @@ def calc_eq_methanation(T,p,x0,type='real gas'): # removed guess
             success = False
             x_eq_vals[i, :] = np.nan
 
-        # now find the minimum g_T_value and respective x_eq
-        min_idx = np.nanargmin(g_T_vals)
-        g_T_value = g_T_vals[min_idx]
-        x_eq = x_eq_vals[min_idx,:]
-
-    '''minimizer_kwargs = {
-    "method": "SLSQP", # SLSQP 
-    "bounds": bnds, 
-    "constraints": cons, 
-    "args": (T, p, type),
-    "options": {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}
-    }
-
-    sol = basinhopping(
-        g_T, 
-        guess, 
-        minimizer_kwargs=minimizer_kwargs, 
-        niter=50,              
-        T=1.0,               
-        stepsize=0.5,        
-        disp=False, 
-    )'''
+    # now find the minimum g_T_value and respective x_eq
+    min_idx = np.nanargmin(g_T_vals)
+    g_T_value = g_T_vals[min_idx]
+    x_eq = x_eq_vals[min_idx,:]
 
     return x_eq,success,g_T_value
