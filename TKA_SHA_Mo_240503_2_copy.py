@@ -436,15 +436,15 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
             summed_K0_percentage_deviation += abs(K0_percentage_deviation)
 
         # check if the equilibrium constants are consistent
-        if T < 300+273.15:
-            if summed_K0_percentage_deviation > 500:
-                x_eq_vals = np.nan
-        elif 300+273.15 <= T < 600+273.15:
-            if summed_K0_percentage_deviation > 2500:
-                x_eq_vals = np.nan
-        else:
-            if summed_K0_percentage_deviation > 5000:
-                x_eq_vals = np.nan
+        #if T < 300+273.15:
+        if summed_K0_percentage_deviation > 2500:
+            x_eq_vals = np.nan
+        #elif 300+273.15 <= T < 600+273.15:
+            #if summed_K0_percentage_deviation > 2500:
+                #x_eq_vals = np.nan
+        #else:
+            #if summed_K0_percentage_deviation > 5000:
+                #x_eq_vals = np.nan
 
     # return p, T, x0, x_eq if successful else return only NaN
     if x_eq_vals is not np.nan:
