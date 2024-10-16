@@ -91,21 +91,21 @@ def element_balance(n, n0):
     return res
 
 def calc_bounds(x0):
-    n0      = x0 * 1    # initial molar amount in mol
+    n0      = x0 * 1                            # initial molar amount in mol
     max_C   = n0[0] + n0[2] + n0[4] + n0[5]     # molar amount of carbon in the system in mol
     max_H   = 2 * n0[1] + 4 * n0[2] + 2 * n0[3] # molar amount of hydrogen in the system in mol
     max_O   = 2 * n0[0] + n0[3] + n0[4]         # molar amount of oxygen in the system in mol
     max_He  = n0[6]                             # molar amount of helium in the system in mol
     max_Ar  = n0[7]                             # molar amount of argon in the system in mol
-    max_N   = n0[8]                             # molar amount of nitrogen in the system
+    max_N   = 2 * n0[8] #n0[8]                  # molar amount of nitrogen in the system
     max_CO2 = min(max_C, 0.5 * max_O)           # maximum possible molar amount of CO2 in mol
     max_H2  = 0.5 * max_H                       # maximum possible molar amount of H2 in mol
     max_CH4 = min(max_C, 0.25 * max_H)          # maximum possible molar amount of CH4 in mol
     max_H2O = min(0.5 * max_H, max_O)           # maximum possible molar amount of H2O in mol
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
-    max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
+    max_N2  = 0.5 * max_N #was0.5               # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, np.inf))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_He), (0, max_Ar), (0, max_N2)) # was np.inf instead of max_N2
     init = np.ones_like(n0)
     return n0,bnds,init
 
