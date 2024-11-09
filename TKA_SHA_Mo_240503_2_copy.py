@@ -74,7 +74,7 @@ def element_balance(n, n0):
     """
     function for checking the element balance as a constraint for the minimization
 
-    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C, He, Ar and N2
+    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C and N2
     :return: residual -> 0
     """
     # element-species matrix (C, O, H, N)
@@ -87,6 +87,26 @@ def element_balance(n, n0):
                   [0, 0, 0, 2]]) # N2
     res = np.matmul(n, A) - np.matmul(n0, A)
     return res
+
+def comp_mole_numbers_to_element_mole_numbers(n):
+    """
+    function for converting the molar amounts of species to the molar amounts of elements
+
+    Args:
+        n (array): molar amounts of species [CO2 H2 CH4 H2O CO C N2]
+    """
+    # element-species matrix (C, O, H, N)
+    A = np.array([[1, 2, 0, 0],  # CO2
+                  [0, 0, 2, 0],  # H2
+                  [1, 0, 4, 0],  # CH4
+                  [0, 1, 2, 0],  # H2O
+                  [1, 1, 0, 0],  # CO
+                  [1, 0, 0, 0],  # C
+                  [0, 0, 0, 2]]) # N2
+    n_elements = np.matmul(n, A)
+    
+    return n_elements
+
 
 def calc_bounds(x0):
     n0      = x0 * 1                            # initial molar amount in mol
