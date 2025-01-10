@@ -426,52 +426,6 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     g_T_vals = np.zeros(len(guesses))
     x_eq_vals = np.zeros([len(guesses),len(x0)])
     n_eq_vals = np.zeros([len(guesses),len(x0)])
-
-    '''for i, guess in enumerate(guesses):
-
-        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
-
-        if sol.success:
-            g_T_vals[i] = sol.fun
-            x_eq_vals[i, :] = sol.x / np.sum(sol.x)
-        else:
-            g_T_vals[i] = np.nan
-            x_eq_vals[i, :] = np.nan
-
-    # now find the minimum g_T_value and respective x_eq
-    try:
-        min_idx = np.nanargmin(g_T_vals)
-        x_eq = x_eq_vals[min_idx,:]
-        success = True
-    except ValueError:
-        x_eq = np.nan
-        success = False
-
-    if success:
-
-        summed_K0_percentage_deviation = 0
-        # check if the equilibrium constants are consistent
-        for reaction in ['CO2 methanation', 'CO methanation', 'WGS', 'Inversed Methane CO2 reforming', 'Boudouard reaction', 'Methane cracking', 'Carbon monoxide reduction', 'Carbon dioxide reduction']:
-            K_0_sim, K_0_vantHoff = check_eq_consts(T, p*1e5, x_eq, reaction)
-            K0_percentage_deviation = 100 * (K_0_sim - K_0_vantHoff) / K_0_vantHoff
-            summed_K0_percentage_deviation += abs(K0_percentage_deviation)
-
-        # check if the equilibrium constants are consistent
-        if T < 300+273.15:
-            if summed_K0_percentage_deviation > 1500:
-                x_eq_vals = np.nan
-        elif 300+273.15 <= T < 600+273.15:
-            if summed_K0_percentage_deviation > 2500:
-                x_eq_vals = np.nan
-        else:
-            if summed_K0_percentage_deviation > 5000:
-                x_eq_vals = np.nan
-
-    # return p, T, x0, x_eq if successful else return only NaN
-    if x_eq_vals is not np.nan:
-        return p, T, x0, x_eq, success
-    else:
-        return np.nan, np.nan, np.nan, np.nan, False'''
     
     for i, guess in enumerate(guesses):
 
