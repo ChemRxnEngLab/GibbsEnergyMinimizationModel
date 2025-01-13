@@ -10,18 +10,18 @@ def phi_Soave(y, T, p):
     """
     function for calculation of fugacity coefficients @ T, p from Soave-Redlich-Kwong-equation of state according to 1972 (doi.org/10.1016/0009-2509(72)80096-4)
 
-    :param y: array containing molar fractions in gas phase of CO2, H2, CH4, H2O, CO and N2 in 1
+    :param y: array containing molar fractions in gas phase of CO2, H2, H2O, CO, DME, MeOH and N2 in 1
     :param T: temperature in K
     :param p: pressure in Pa
-    :return: fugacity coefficients of CO2, H2, CH4, H2O, CO and N2 @ T, p in 1
+    :return: fugacity coefficients of CO2, H2, H2O, CO, DME, MeOH and N2 @ T, p in 1
     """
 
-    y_i   = y # array of gas phase molar fractions (CO2, H2, CH4, H2O, CO, He, Ar and N2) in 1
+    y_i   = y # array of gas phase molar fractions (CO2, H2, H2O, CO, DME, MeOH and N2) in 1
 
-    # Parameter         # CO2   # H2    # CH4    # H2O   # CO    # N2
-    omega_i = np.array([ 0.224, -0.215,   0.011,  0.343,  0.048, 0.037])      # array containing acentric factors in 1 (Perry's)
-    T_c_i   = np.array([304.21,  33.19, 190.564, 647.13, 132.92, 126.2])      # array contaning critical temperatures in K (Perry's)
-    p_c_i   = np.array([  73.9,   13.2,    45.9,  219.4,   34.9, 33.9]) * 1e5 # array containing critical pressures in Pa (Perry's)
+    # Parameter         # CO2   # H2     # H2O   # CO   # DME  # MeOH # N2
+    omega_i = np.array([ 0.224, -0.215,  0.343,  0.048, 0.200, 0.565, 0.037])      # array containing acentric factors in 1 (Perry's)
+    T_c_i   = np.array([304.21,  33.19, 647.13, 132.92, 400.1, 512.5, 126.2])      # array contaning critical temperatures in K (Perry's)
+    p_c_i   = np.array([  73.9,   13.1,  219.4,   34.9, 53.7, 80.8,   33.9]) * 1e5 # array containing critical pressures in Pa (Perry's)
     # Green, Don W.; Perry, Robert H. (2003): Perry's chemical engineers' handbook. 7th ed., internat. ed., [Nachdr.]. New York: McGraw-Hill.
 
     T_r_i = T / T_c_i                                      # array containing reduced temperatures in 1
@@ -41,6 +41,8 @@ def phi_Soave(y, T, p):
 
     Z_solve = root(Z_root, np.array([1]), args = (A, B))
     Z = Z_solve.x
+
+    print('Z', Z)
 
     # calculation of phi from ln phi_i = b_i/b*(Z-1)-ln(Z-B)-A/B*(2 sqrt(a_i/a)-b_i/b)*ln(1+B/Z)
     res = np.exp(ratio_b * (Z - 1) - np.log(Z - B) - A / B * (2 * ratio_a - ratio_b) * np.log(1 + B / Z)) # array of fugacity coefficients in 1
@@ -68,3 +70,20 @@ def phi_Soave(y, T, p):
 # n = np.array([y_CO2, y_H2, y_CH4, y_H2O, y_CO, y_He, y_Ar, y_N2]) # array containing amounts of substance in mol, assuming n = 1 mol
 #
 # print('phi', phi_Soave(n, T, p))
+
+
+# testing of function
+p     = 100e5          # enter pressure in Pa
+T     = 200 + 273.15 # enter temperature in K
+# enter mol fractions in 1:
+y_CO2  = 0.2
+y_H2  = 0.1
+y_H2O  = 0.1
+y_CO  = 0.1
+y_DME = 0.2
+y_MeOH = 0.2
+y_N2 = 0.1
+#
+n = np.array([y_CO2, y_H2, y_H2O, y_CO, y_DME, y_MeOH, y_N2]) # array containing amounts of substance in mol, assuming n = 1 mol
+#
+print('phi', phi_Soave(n, T, p))
