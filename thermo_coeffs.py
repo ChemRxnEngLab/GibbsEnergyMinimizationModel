@@ -143,3 +143,7 @@ def delta_f_G(T, comp):
     return dfG0
 
 # dfG = dfH - T * dfS --> can be calculated from enthalpy and entropy of elements
+
+
+print(delta_f_G(298.15, "H2O"))
+print(delta_f_G(500, "H2O"))
