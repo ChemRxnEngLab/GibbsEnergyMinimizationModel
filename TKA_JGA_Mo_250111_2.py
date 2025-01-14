@@ -4,7 +4,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+from TKA_Mo_fug_coeffs_MeOH import phi_Soave
 import warnings
 from thermo_coeffs import delta_f_G
 
@@ -26,10 +26,9 @@ def dfg(T):
 
     res = np.matmul(T_poly, np.transpose(coeff)) * 1000
     # calculate DME and MEOH separately
-    dfg_dme = delta_f_G(T, 'CH3OCH3')
     dfg_meoh = delta_f_G(T, 'CH3OH')
     dfg_n2 = 0
-    res = np.append(res, [dfg_dme, dfg_meoh, dfg_n2])
+    res = np.append(res, [dfg_meoh, dfg_n2])
     
     return res
 
@@ -63,7 +62,6 @@ def g_T(n, T, p, type="real gas"):
     R  = 8.314 # universal gas constant in J / mol K
     p0 = 1 # standard pressure in bar
 
-
     res = np.dot(n, dfgi) + R * T * np.dot(n, np.log(phii * p * y_gas / p0))
     
     return res
@@ -82,7 +80,6 @@ def element_balance(n, n0):
                   [0, 0, 2, 0],  # H2
                   [0, 1, 2, 0],  # H2O
                   [1, 1, 0, 0],  # CO
-                  [2, 1, 6, 0],  # DME
                   [1, 1, 4, 0],  # MeOH
                   [0, 0, 0, 2]]) # N2
     
@@ -93,19 +90,18 @@ def element_balance(n, n0):
 def calc_bounds(x0):
     
     n0      = x0 * 1                                           # initial molar amount in mol
-    max_C   = n0[0] + n0[3] + 2 * n0[4] + n0[5]                # molar amount of carbon in the system in mol
-    max_H   = 2 * n0[1] + 2 * n0[2] + 6 * n0[4] + 4 * n0[5]    # molar amount of hydrogen in the system in mol
-    max_O   = 2 * n0[0] + n0[2] + n0[3] + n0[4] + n0[5]        # molar amount of oxygen in the system in mol
-    max_N   = 2 * n0[6]                                        # molar amount of nitrogen in the system
+    max_C   = n0[0] + n0[3] + n0[4]                            # molar amount of carbon in the system in mol
+    max_H   = 2 * n0[1] + 2 * n0[2] + 4 * n0[4]                # molar amount of hydrogen in the system in mol
+    max_O   = 2 * n0[0] + n0[2] + n0[3] + n0[4]                # molar amount of oxygen in the system in mol
+    max_N   = 2 * n0[5]                                        # molar amount of nitrogen in the system
     max_CO2 = min(max_C, 0.5 * max_O)                          # maximum possible molar amount of CO2 in mol
     max_H2  = 0.5 * max_H                                      # maximum possible molar amount of H2 in mol
     max_H2O = min(0.5 * max_H, max_O)                          # maximum possible molar amount of H2O in mol
     max_CO  = min(max_C, max_O)                                # maximum possible molar amount of CO in mol
-    max_DME = min(0.5 * max_C, max_O, max_H / 6)               # maximum possible molar amount of DME in mol
     max_MeOH = min(max_C, max_O, 0.25 * max_H)                 # maximum possible molar amount of MeOH in mol
     max_N2  = 0.5 * max_N                                      # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_DME), (0, max_MeOH), (0, max_N2))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, max_N2))
     init = np.ones_like(n0)
     
     return n0,bnds,init 
@@ -139,8 +135,8 @@ def calc_eq(T,p,x0,type='real gas'): # removed guess
 
     ## use 3 different guesses for the minimization
     # 3 rndm guesses
-    rndm_guesses = np.random.dirichlet(np.ones(len(x0)), 5)
-    guesses = [x0, np.ones_like(x0), rndm_guesses[0], rndm_guesses[1], rndm_guesses[2], rndm_guesses[3], rndm_guesses[4]]
+    rndm_guesses = np.random.dirichlet(np.ones(len(x0)), 3)
+    guesses = [x0, np.ones_like(x0), rndm_guesses[0], rndm_guesses[1], rndm_guesses[2]]
 
     g_T_vals = np.zeros(len(guesses))
     x_eq_vals = np.zeros([len(guesses),len(x0)])
