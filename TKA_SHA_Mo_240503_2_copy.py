@@ -4,7 +4,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+from TKA_Mo_240503_2_fug_coeff_V1 import phi_Soave
 import warnings
 import scipy.constants as csts
 from scipy.integrate import quad
@@ -47,10 +47,10 @@ def g_T(n, T, p, type):
             n[i] = 1e-20
 
     n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO and N2) in mol
-    n_sol = n[5] # array containing only the amounts of substance of solid species (C)
+    #n_sol = n[5] # array containing only the amounts of substance of solid species (C)
 
     y_gas = n_gas / np.sum(n_gas) # array containing gas phase molar fractions of gaseous species
-    x_sol = n_sol / np.sum(n_sol) # array containing solid phase molar fractions of solid species
+    #x_sol = n_sol / np.sum(n_sol) # array containing solid phase molar fractions of solid species
 
     dfgi = dfg(T)              # Gibbs free energy of formation of all species in J / mol
     phii = np.ones_like(n_gas) # default array for fugacity coefficients of gaseous species in 1
@@ -65,7 +65,7 @@ def g_T(n, T, p, type):
     R  = 8.314 # universal gas constant in J / mol K
     p0 = 1 # standard pressure in bar
 
-    res = np.dot(n, dfgi) + R * T * (np.dot(n_gas, np.log(phii * p * y_gas / p0)) + np.dot(n_sol, np.log(x_sol)))
+    res = np.dot(n, dfgi) + R * T * (np.dot(n_gas, np.log(phii * p * y_gas / p0))) #+ np.dot(n_sol, np.log(x_sol)))
     return res
 
 
@@ -247,7 +247,6 @@ def c_p_R(T, reaction):
         c_p_R = c_p_C + c_p_H2O - c_p_CO - c_p_H2
     elif reaction == 'Carbon dioxide reduction':
         c_p_R = c_p_C + 2 * c_p_H2O - c_p_CO2 - 2 * c_p_H2
-
 
     return c_p_R
 
@@ -506,7 +505,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
 
         # check if the equilibrium constants are consistent
         if T < 300+273.15:
-            if summed_K0_percentage_deviation > 1500:
+            if summed_K0_percentage_deviation > 2500:
                 x_eq_vals = np.nan
         elif 300+273.15 <= T < 600+273.15:
             if summed_K0_percentage_deviation > 2500:

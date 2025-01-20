@@ -84,6 +84,30 @@ Glenn_coeffs_H2O = { # 200 - 1000 K
     "b_2": 1.724 * 1e1,
 }
 
+Glenn_coeffs_H2O_L = { # 373.15 - 600 K
+    "a_1": 1.263631001e9,
+    "a_2": -1.680380249e7,
+    "a_3": 9.278234790e4,
+    "a_4": -2.722373950e2,
+    "a_5": 4.479243760e-1,
+    "a_6": -3.919397430e-4,
+    "a_7": 1.425743266e-7,
+    "b_1": 8.113176880e7,
+    "b_2": -5.134418080e5,
+}
+
+Glenn_coeffs_CH3OH_L = { # 175.61 - 390 K
+    "a_1": -1.302004763e6,
+    "a_2": 3.166984180e4,
+    "a_3": -3.031242152e2,
+    "a_4": 1.602231130e0,
+    "a_5": -4.594507340e-3,
+    "a_6": 6.990178310e-6,
+    "a_7": -4.207388950e-9,
+    "b_1": -1.656168201e5,
+    "b_2": 1.514346642e3
+}
+
 coeffs = {
     "H2": Glenn_coeffs_H2,
     "CH3OH": Glenn_coeffs_CH3OH,
@@ -91,7 +115,9 @@ coeffs = {
     "C_low": Glenn_coeffs_C_low,
     "C_high": Glenn_coeffs_C_high,
     "O2": Glenn_coeffs_O2,
-    "H2O": Glenn_coeffs_H2O
+    "H2O": Glenn_coeffs_H2O,
+    "H2O_L": Glenn_coeffs_H2O_L,
+    "CH3OH_L": Glenn_coeffs_CH3OH_L
 }
 
 def Thermo_props(comp, T): #in SI units
@@ -138,6 +164,16 @@ def delta_f_G(T, comp):
         delta_f_H = Thermo_props("H2O", T)[1] - Thermo_props("H2", T)[1] - 0.5 * Thermo_props("O2", T)[1]
         delta_f_S = Thermo_props("H2O", T)[2] - Thermo_props("H2", T)[2] - 0.5 * Thermo_props("O2", T)[2]
 
+    elif comp == "H2O_L":
+        
+        delta_f_H = Thermo_props("H2O_L", T)[1] - Thermo_props("H2", T)[1] - 0.5 * Thermo_props("O2", T)[1]
+        delta_f_S = Thermo_props("H2O_L", T)[2] - Thermo_props("H2", T)[2] - 0.5 * Thermo_props("O2", T)[2]
+
+    elif comp == "CH3OH_L":
+
+        delta_f_H = Thermo_props("CH3OH_L", T)[1] - Thermo_props("C_low", T)[1] - 2 * Thermo_props("H2", T)[1] - 0.5 * Thermo_props("O2", T)[1]
+        delta_f_S = Thermo_props("CH3OH_L", T)[2] - Thermo_props("C_low", T)[2] - 2 * Thermo_props("H2", T)[2] - 0.5 * Thermo_props("O2", T)[2]
+
     dfG0 = delta_f_H - T * delta_f_S
 
     return dfG0
@@ -147,3 +183,5 @@ def delta_f_G(T, comp):
 
 print(delta_f_G(298.15, "H2O"))
 print(delta_f_G(500, "H2O"))
+
+print(delta_f_G(298.15, "H2O_L"))
