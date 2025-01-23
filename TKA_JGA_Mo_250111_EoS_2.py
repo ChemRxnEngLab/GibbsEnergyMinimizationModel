@@ -3,8 +3,8 @@
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 
 import numpy as np
-from scipy.optimize import minimize
-from TKA_Mo_fug_coeffs_MeOH import phi_Soave
+from scipy.optimize import minimize, basinhopping
+from TKA_Mo_fug_coeffs_MeOH import phi_Soave, phi_Soave_2
 import warnings
 from thermo_coeffs import delta_f_G
 
@@ -27,10 +27,8 @@ def dfg(T):
     res = np.matmul(T_poly, np.transpose(coeff)) * 1000
     # calculate DME and MEOH separately
     dfg_meoh = delta_f_G(T, 'CH3OH')
-    dfg_meoh_l = delta_f_G(T, 'CH3OH_L')
-    dfg_h20_l = delta_f_G(T, 'H2O_L')
     dfg_n2 = 0
-    res = np.append(res, [dfg_meoh, dfg_n2, dfg_h20_l, dfg_meoh_l])
+    res = np.append(res, [dfg_meoh, dfg_n2])
     
     return res
 
@@ -45,44 +43,49 @@ def g_T(n, T, p, type="real gas"):
     :return: total Gibbs free energy in J / mol
     """
 
-    n_G = n[:-2] # array containing amounts of substance in gas phase in mol
-    n_L = n[-2:] # array containing amounts of substance in liquid phase in mol
+    n_G = n[:6] # array containing amounts of substance in gas phase in mol
+    n_L = n[6:] # array containing amounts of substance in liquid phase in mol
 
-    for i in range(n_G.shape[0]):
-        if n_G[i] <= 0:
-            n_G[i] = 1e-20
-
-    for i in range(n_L.shape[0]):
-        if n_L[i] <= 0:
-            n_L[i] = 1e-20
+    n_G = np.maximum(n_G, 1e-20) # set all values below 0 to 0
+    n_L = np.maximum(n_L, 1e-20) # set all values below 0 to 0
 
     y_gas = n_G / np.sum(n_G) # array containing gas phase molar fractions of gaseous species
     x_liq = n_L / np.sum(n_L) # array containing liquid phase molar fractions of gaseous species
+    z_mix = np.hstack((y_gas, x_liq)) # array containing molar fractions of all species
 
-    dfgi = dfg(T)                # Gibbs free energy of formation of all species in J / mol @ T in ideal gas state
-    phii = np.ones_like(n_G)     # default array for fugacity coefficients of gaseous species in 1
+    dfgi = dfg(T)                # Gibbs free energy of formation of all species in J / mol @ T in ideal gas state_
+    dfg_meoh = dfgi[-2]          # Gibbs free energy of formation of MeOH in J / mol @ T in ideal gas state
+    dfg_H2O = dfgi[2]            # Gibbs free energy of formation of H2O in J / mol @ T in ideal gas state
+    dfg_L = np.array([dfg_H2O, dfg_meoh]) # Gibbs free energy of formation of liquid species in J / mol @ T in ideal gas state
+    
+    phii = np.ones_like(n)       # default array for fugacity coefficients of gaseous species in 1
 
     if type == 'ideal gas':
         phii = phii
     elif type == 'real gas':
-        phii = phi_Soave(y_gas, T, p * 1e5) # function needs pressure in Pa and molar fractions in gas phase
+        phii_L, phii_V, f_H2O, f_MeOH = phi_Soave_2(z_mix, T, p * 1e5) # function needs pressure in Pa and molar fractions in gas phase
     else:
         print('Please choose type of gas from given options: ideal gas or real gas')
 
     R  = 8.314 # universal gas constant in J / mol K
     p0 = 1 # standard pressure in bar
 
-    res = np.dot(n_G, dfgi[:-2]) + np.dot(n_L, dfgi[-2:]) + R * T * np.dot(n_G, np.log(phii * p * y_gas / p0)) + R * T * np.dot(n_L, np.log(x_liq))
+    # check if percentage deviation of f_H2O and f_MeOH is below 1%
+    if not (abs(f_H2O[0] - f_H2O[1]) / f_H2O[0] < 5 and abs(f_MeOH[0] - f_MeOH[1]) / f_MeOH[0] < 5):
+        phii_L = np.ones_like(n_L)
+
+    res_G = np.dot(n_G, dfgi) + R * T * np.dot(n_G, np.log(phii_V * p * y_gas / p0))   
+    res_L = np.dot(n_L, dfg_L) + R * T * np.dot(n_L, np.log(phii_L * p * x_liq / p0)) 
+    res = res_G + res_L
     
     return res
-
 
 # setting constraints
 def element_balance(n, n0):
     """
     function for checking the element balance as a constraint for the minimization
 
-    :param n0: vector containing initial molar amounts of CO2, H2, H2O, CO, CH3OCH3, CH3OH and N2
+    :param n0: vector containing initial molar amounts of CO2, H2, H2O, CO, CH3OH and N2
     :return: residual -> 0
     """
 
@@ -92,21 +95,24 @@ def element_balance(n, n0):
                   [0, 1, 2, 0],  # H2O
                   [1, 1, 0, 0],  # CO
                   [1, 1, 4, 0],  # MeOH
-                  [0, 0, 0, 2],  # N2
-                  [0, 1, 2, 0], # H2O_L
-                  [1, 1, 4, 0]]) # MeOH_L
+                  [0, 0, 0, 2]]) # N2
     
-    res = np.matmul(n, A) - np.matmul(n0, A)
+    A_L = np.array([[0, 1, 2, 0],  # H2O_L
+                    [1, 1, 4, 0]]) # MeOH_L
+    
+    res = np.matmul(n[:6], A) - np.matmul(n0[:6], A) + np.matmul(n[6:], A_L) - np.matmul(n0[6:], A_L)
     
     return res
 
 def calc_bounds(x0):
     
-    n0      = x0 * 1                                           # initial molar amount in mol
-    max_C   = n0[0] + n0[3] + n0[4]                            # molar amount of carbon in the system in mol
-    max_H   = 2 * n0[1] + 2 * n0[2] + 4 * n0[4]                # molar amount of hydrogen in the system in mol
-    max_O   = 2 * n0[0] + n0[2] + n0[3] + n0[4]                # molar amount of oxygen in the system in mol
-    max_N   = 2 * n0[5]                                        # molar amount of nitrogen in the system
+    n0     = x0 * 1                                                                                                # initial molar amount in mol
+    n_G    = n0[:6]                                                                                                 # initial molar amount in gas phase in mol
+    n_L    = n0[6:]                                                                                                 # initial molar amount in liquid phase in mol
+    max_C   = n_G[0] + n_G[3] + n_G[4] + n_L[1]                                                    # molar amount of carbon in the system in mol
+    max_H   = 2 * n_G[1] + 2 * n_G[2] + 4 * n_G[4] + 2 * n_L[0] + 4 * n_L[1]
+    max_O   = 2 * n_G[0] + n_G[2] + n_G[3] + n_G[4] + n_L[0] + n_L[1]        # molar amount of oxygen in the system in mol
+    max_N   = 2 * n_G[5]                                                                 # molar amount of nitrogen in the system
     max_CO2 = min(max_C, 0.5 * max_O)                          # maximum possible molar amount of CO2 in mol
     max_H2  = 0.5 * max_H                                      # maximum possible molar amount of H2 in mol
     max_H2O = min(0.5 * max_H, max_O)                          # maximum possible molar amount of H2O in mol
@@ -114,7 +120,11 @@ def calc_bounds(x0):
     max_MeOH = min(max_C, max_O, 0.25 * max_H)                 # maximum possible molar amount of MeOH in mol
     max_N2  = 0.5 * max_N                                      # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, max_N2), (0, max_H2O), (0, max_MeOH))
+    bnds = (
+        (0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, max_N2), # bounds for gas phase
+        (0, max_H2O), (0, max_MeOH) # bounds for liquid phase
+        )
+    
     init = np.ones_like(n0)
     
     return n0,bnds,init 
@@ -140,51 +150,65 @@ def calc_eq(T,p,x0,type='real gas'): # removed guess
     p = p*1e-5 # in bar
 
     n0,bnds,_ = calc_bounds(x0)
+    
     cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
 
-    if round(np.sum(x0),5) != 1:
-        ## Warning
-        warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
+    rndm_no = 3
+    rndm_guesses = np.random.dirichlet(np.ones_like(x0), rndm_no)
+    # make another rndm guess with n0 in G sums up to 1 and n0 in L equals 0 
+    rndm_guesses_G = np.random.dirichlet(np.ones_like(x0[:6]), 1)[0]
+    rndm_guesses_L = np.array([1e-20, 1e-20])
+    rndm_guesses_min3 = np.hstack((rndm_guesses_G, rndm_guesses_L))
+    # another manual gess
+    man_guess_G = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0])
+    man_guess_L = np.array([0.5, 0.5])
+    man_guess = np.hstack((man_guess_G, man_guess_L))
 
-    ## use 3 different guesses for the minimization
-    # 3 rndm guesses
-    rndm_guesses = np.random.dirichlet(np.ones(len(x0)), 5)
-    guesses = [x0, np.ones_like(x0), rndm_guesses[0], rndm_guesses[1], rndm_guesses[2], rndm_guesses[3], rndm_guesses[4]]
+    guesses = np.zeros((rndm_no + 4, len(x0)))
+    
+    for i in range(rndm_no):
+        
+        guesses[i, :] = rndm_guesses[i]
+    
+    guesses[-4, :] = man_guess
+    guesses[-3, :] = rndm_guesses_min3
+    guesses[-2, :] = x0
+    guesses[-1, :] = np.ones_like(x0)
 
     g_T_vals = np.zeros(len(guesses))
-    x_eq_vals = np.zeros([len(guesses),len(x0)])
-    n_eq_vals = np.zeros((len(guesses),len(x0)))
+    x_eq_vals = np.zeros((len(guesses), x0.shape[0]))
+    n_eq_vals = np.zeros((len(guesses), x0.shape[0]))
 
     for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
+        # Define the local optimization method
 
         if sol.success:
             g_T_vals[i] = sol.fun
             success = True
-            x_eq_vals[i, :] = sol.x / np.sum(sol.x)
+            #x_eq_vals[i, :] = sol.x / np.sum(sol.x)
             n_eq_vals[i, :] = sol.x
         else:
             g_T_vals[i] = np.nan
             success = False
-            x_eq_vals[i, :] = np.nan
+            #x_eq_vals[i, :] = np.nan
             n_eq_vals[i, :] = np.nan
-
 
     try:
         # now find the minimum g_T_value and respective x_eq
         min_idx = np.nanargmin(g_T_vals)
         g_T_value = g_T_vals[min_idx]
-        x_eq = x_eq_vals[min_idx,:]
+        #x_eq = x_eq_vals[min_idx,:]
         n_eq = n_eq_vals[min_idx,:]
 
     except ValueError:
         success = False
-        x_eq = np.nan
+        #x_eq = np.nan
         g_T_value = np.nan
         n_eq = np.nan
 
-    return x_eq,success,g_T_value,n_eq
+    return _,success,g_T_value,n_eq
 
 '''# testing of function
 p     = 30e5 #100e5          # enter pressure in Pa

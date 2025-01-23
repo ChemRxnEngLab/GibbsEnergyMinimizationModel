@@ -40,9 +40,9 @@ def g_T(n, T, p, type):
     :return: total Gibbs free energy in J / mol
     """
 
-    for i in range(n.shape[0]):
-        if n[i] <= 0:
-            n[i] = 1e-20
+    #for i in range(n.shape[0]):
+    #    if n[i] <= 0:
+    #        n[i] = 1e-20
 
     n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO, He, Ar and N2) in mol
     n_sol = n[5] # array containing only the amounts of substance of solid species (C)

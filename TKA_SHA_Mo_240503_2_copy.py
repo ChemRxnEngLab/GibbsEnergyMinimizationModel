@@ -412,7 +412,15 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     p = p*1e-5 # in bar
 
     n0,bnds,_ = calc_bounds(x0)
-    cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
+    cons = [{'type': 'eq', 'fun': element_balance, 'args': [n0]},
+            {'type': 'ineq', 'fun': lambda n: n[0] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[1] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[2] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[3] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[4] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[5] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[6] - 1e-20}]
+    
 
     if round(np.sum(x0),5) != 1:
         ## Warning
@@ -476,7 +484,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     
     for i, guess in enumerate(guesses):
 
-        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
+        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-12})
 
         if sol.success:
             g_T_vals[i] = sol.fun
