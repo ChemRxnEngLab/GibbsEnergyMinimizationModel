@@ -185,3 +185,10 @@ def delta_f_G(T, comp):
 #print(delta_f_G(500, "H2O"))
 
 #print(delta_f_G(298.15, "H2O_L"))
+
+#H2O_vap_coeffs = {
+#    "A": 6.853064,
+#    "B": 7.437940,
+#    "C": −2.937398,
+#    "D": −3.282184,
+#    "E": 8.396833,
