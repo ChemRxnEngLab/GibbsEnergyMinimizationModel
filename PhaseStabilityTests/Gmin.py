@@ -3,7 +3,7 @@ from scipy.optimize import minimize, basinhopping
 from SRK import phi_SRK, phi_SRK_VLE
 import warnings
 from thermo_coeffs import delta_f_G
-from PhaseStability import min_tpd
+from PhaseStability import min_tpd, initial_guesses, min_TPD, check_phase_stability, init_2Ph_calc
 
 
 def dfg(T):
@@ -162,7 +162,7 @@ def calc_bounds(x0):
     max_CH4 = min(max_C, 0.25 * max_H)                            # maximum possible molar amount of CH4 in mol
     #max_N2  = 0.5 * max_N                                      # maximum possible molar amount of N2 in mol
     
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, n0[5]))#(0, max_N2))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, 1.0001 * n0[5]))#(0, max_N2))
     init = np.ones_like(n0)
     
     return n0,bnds,init 
@@ -186,7 +186,7 @@ def calc_bounds_VLE(x0):
     max_CH4 = min(max_C, 0.25 * max_H)  # maximum possible molar amount of CH4 in mol
    # max_N2 = 0.5 * max_N  # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, n_t0[5]))#(0, max_N2))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_H2O), (0, max_CO), (0, max_MeOH), (0, 1.0001 * n_t0[5]))#(0, max_N2))
     bnds += bnds
     init = np.ones_like(n0)
 
@@ -243,29 +243,29 @@ def calc_eq(T, p, x0):
             {'type': 'eq', 'fun': lambda n: n[5] - n0[5]}
             ]  # Ensures all components are >= 0
     
-    #init_guess_1 = np.array([0.15, 0.45, 0.1, 0.0001, 0.10, 1e-20])
-    #init_guess_2 = x0
+    init_guess_1 = np.array([0.2, 0.5, 0.1, 0.0001, 0.10, 1e-10])
+    init_guess_2 = x0
 
-    #init_guess = [init_guess_1, init_guess_2]
+    init_guess = [init_guess_1, init_guess_2]
 
-    #g_T_values = np.zeros(len(init_guess))
-    #n_eq_values = np.zeros((len(init_guess), 6))
+    g_T_values = np.zeros(len(init_guess))
+    n_eq_values = np.zeros((len(init_guess), 6))
 
-    #for i in range(2):  
-    sol = basinhopping(g_T, x0=x0, minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds, 'constraints': cons, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
+    for i in range(2):  
+        sol = basinhopping(g_T, x0=init_guess[i], minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds, 'constraints': cons, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
     # solve with slsqp only
     #sol = minimize(g_T, x0=init_guess[i], bounds=bnds, constraints=cons, args=(T, p), method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
-    #success = False
-    #if sol.success:
-    #g_T_values[i] = sol.fun
-    #n_eq_values[i] = sol.x
-    #success = True
+    success = False
+    if sol.success:
+        g_T_values[i] = sol.fun
+        n_eq_values[i] = sol.x
+        success = True
 
-    #if success:
-    #g_T_value = g_T_values[np.argmin(g_T_values)]
-    #n_eq = n_eq_values[np.argmin(g_T_values)]
-    #x_eq = n_eq / np.sum(n_eq)
+    if success:
+        g_T_value = g_T_values[np.argmin(g_T_values)]
+        n_eq = n_eq_values[np.argmin(g_T_values)]
+        x_eq = n_eq / np.sum(n_eq)
 
     #sol = minimize(g_T, x0=x0, bounds=bnds, args=(T, p), constraints=cons, method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
     #sol = basinhopping(g_T, x0=x0, minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds, 'constraints': cons, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
@@ -280,20 +280,42 @@ def calc_eq(T, p, x0):
         success = True
 
         # check phase stability criterion
-        w = np.random.dirichlet(np.ones(6), size=5)
-        min_tpd_vals = np.zeros(len(w))
+        #w = np.random.dirichlet(np.ones(6), size=5)
+        w = np.zeros((2, 6))
+        w[0] = initial_guesses(x_eq, T, p, 'vapor')
+        w[1] = initial_guesses(x_eq, T, p, 'liquid')
+
+        #print("w init", w)
+
+        min_tpd_vals = np.zeros(2)
         x_L = np.zeros((len(w), 6))
 
-        for i in range(len(w)):
+        #print("min_tpd_vals init", min_tpd_vals)
+
+        for i in range(len(min_tpd_vals)):
             
-            min_tpd_vals[i], x_L[i, :] = min_tpd(w[i], x_eq, T, p)
+            #min_tpd_vals[i], x_L[i, :] = min_tpd(w[i], x_eq, T, p)
+            #min_tpd_vals[i], x_L[i, :] = min_TPD(w[i], x_eq, T, p)
+            if i == 0:
+                min_tpd_vals[i], x_L[i, :] = min_tpd(w[i], x_eq, T, p, 'vapor')
+            else:
+                min_tpd_vals[i], x_L[i, :] = min_tpd(w[i], x_eq, T, p, 'liquid')
+            #min_tpd_vals[i], x_L[i, :] = check_phase_stability(w, x_eq, T, p, 'vapor')
+
+        #print("min_tpd_vals", min_tpd_vals)
 
         if min(min_tpd_vals) < 0:
+
+            if min_tpd_vals[0] < min_tpd_vals[1]:
+                trial_phase = 'vapor'
+            else:
+                trial_phase = 'liquid'
+
+            #print("min_tpd_vals", min_tpd_vals)
 
             print("T in K", T)
             print("p in bae", p*1e-5)
             print("min_tpd", min(min_tpd_vals))
-            print(g_T(n_eq, T, p))
             #print("Z value init gas comp", phi_SRK(x_eq, T, p, 'vapor')[1], phi_SRK(x_eq, T, p, 'liquid')[1])
             
             warnings.warn("Phase stability criterion not fulfilled. Check results carefully.")
@@ -306,7 +328,7 @@ def calc_eq(T, p, x0):
             n_t0_VLE = np.sum(n0_VLE)
 
             cons_VLE = [{'type': 'eq', 'fun': element_balance_VLE, 'args': [n0_VLE]},
-                        {'type': 'ineq', 'fun': lambda n: n},
+                        #{'type': 'ineq', 'fun': lambda n: n},
                         {'type': 'eq', 'fun': lambda n: n[5] + n[11] - n0_VLE[5] - n0_VLE[11]},
                         {'type': 'eq', 'fun': isofug_cond, 'args': (T, p)}]
             
@@ -315,10 +337,16 @@ def calc_eq(T, p, x0):
 
             init_guess_1 = np.hstack((x_eq, x_L_init_guess))
             init_guess_2 = x0_VLE
-            init_guess_3 = np.hstack((x_eq, x_eq))
-            init_guess_4 = np.hstack((x_L_init_guess, x_L_init_guess))
+            init_guess_3 = np.hstack((x_L_init_guess, x_L_init_guess))
+            
+            #np.hstack((x_eq, x_eq)) * 0.5 * n_t0_VLE
+            init_guess_4 = init_2Ph_calc(x_L_init_guess, p, T, trial_phase)
 
-            init_guess = [init_guess_1, init_guess_2, init_guess_3, init_guess_4]
+            init_guess_5 = np.hstack((x_eq, x_eq))
+
+
+            #init_guess = initial_guesses(x_eq, T, p)
+            init_guess = [init_guess_1, init_guess_2, init_guess_3, init_guess_4, init_guess_5]
             g_T_values = np.zeros(len(init_guess))
             n_eq_values = np.zeros((len(init_guess), 12))
 
@@ -343,6 +371,12 @@ def calc_eq(T, p, x0):
                 n_eq = n_eq_values[np.argmin(g_T_values)]
                 x_G_eq = n_eq[:6] / np.sum(n_eq[:6])
                 x_L_eq = n_eq[6:] / np.sum(n_eq[6:])
+
+                K_ij = x_G_eq / x_L_eq
+                if np.sum(np.log(K_ij)**2) < 1e-4:
+
+                    print("Trivial solution found.")
+
                 x_eq = np.hstack((x_G_eq, x_L_eq))
 
             else:
@@ -373,6 +407,8 @@ def calc_eq(T, p, x0):
         x_eq = np.nan
         success = False
         PhaseStability = False
+
+        print("one phase calculation failed")
 
     if success and PhaseStability:
         zero_array = np.zeros(6)
