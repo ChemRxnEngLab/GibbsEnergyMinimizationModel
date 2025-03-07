@@ -252,9 +252,9 @@ def calc_eq(T, p, x0):
     n_eq_values = np.zeros((len(init_guess), 6))
 
     for i in range(2):  
-        sol = basinhopping(g_T, x0=init_guess[i], minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds, 'constraints': cons, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
+    #    sol = basinhopping(g_T, x0=init_guess[i], minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds, 'constraints': cons, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
     # solve with slsqp only
-    #sol = minimize(g_T, x0=init_guess[i], bounds=bnds, constraints=cons, args=(T, p), method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
+        sol = minimize(g_T, x0=x0, bounds=bnds, constraints=cons, args=(T, p), method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
     success = False
     if sol.success:
@@ -354,9 +354,9 @@ def calc_eq(T, p, x0):
 
                 success = False
 
-                sol_VLE = basinhopping(g_T_VLE, x0=init_guess[i], minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds_VLE, 'constraints': cons_VLE, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
+                #sol_VLE = basinhopping(g_T_VLE, x0=init_guess[i], minimizer_kwargs={'method': 'SLSQP', 'bounds': bnds_VLE, 'constraints': cons_VLE, 'args': (T, p), 'options': {'disp': False, 'maxiter': 1000, 'ftol': 1e-5}})
                 # solve with slsqp only
-                #sol_VLE = minimize(g_T_VLE, x0=init_guess[i], bounds=bnds_VLE, constraints=cons_VLE, args=(T, p), method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
+                sol_VLE = minimize(g_T_VLE, x0=init_guess[i], bounds=bnds_VLE, constraints=cons_VLE, args=(T, p), method='SLSQP', options={'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
                 
                 if sol_VLE.success:
                     

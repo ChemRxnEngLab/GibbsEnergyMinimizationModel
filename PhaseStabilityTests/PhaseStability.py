@@ -150,8 +150,8 @@ def min_tpd(w, z, T, p, trial_phase):
             #{"type": "eq", "fun": isofugacity_constraint, "args": (z, T, p)}]
 
     bnds = [(0, 1)] * len(w)
-    #res = minimize(tpd, w, args=(z, T, p), method="SLSQP", bounds=bnds, constraints=cns, options={"disp": False, "maxiter": 1000, "ftol": 1e-5})
-    res = basinhopping(tpd, w, minimizer_kwargs={"method": "SLSQP", "bounds": bnds, "constraints": cns, "options": {"disp": False, "maxiter": 1000, "ftol": 1e-5}, "args": (z, T, p, trial_phase)})
+    res = minimize(tpd, w, args=(z, T, p, trial_phase), method="SLSQP", bounds=bnds, constraints=cns, options={"disp": False, "maxiter": 1000, "ftol": 1e-5})
+    #res = basinhopping(tpd, w, minimizer_kwargs={"method": "SLSQP", "bounds": bnds, "constraints": cns, "options": {"disp": False, "maxiter": 1000, "ftol": 1e-5}, "args": (z, T, p, trial_phase)})
 
     return res.fun, res.x
 
@@ -169,6 +169,6 @@ def min_TPD(W, z, T, p, trial_phase):
     return res.fun, res.x
 
 
-print(vapor_pressure(700))
+#print(vapor_pressure(700))
 
 
