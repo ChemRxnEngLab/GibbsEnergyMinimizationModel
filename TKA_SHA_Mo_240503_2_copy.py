@@ -484,7 +484,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     
     for i, guess in enumerate(guesses):
 
-        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-12})
+        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
         if sol.success:
             g_T_vals[i] = sol.fun
