@@ -47,10 +47,10 @@ def g_T(n, T, p, type):
             n[i] = 1e-20
 
     n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO and N2) in mol
-    #n_sol = n[5] # array containing only the amounts of substance of solid species (C)
+    n_sol = n[5] # array containing only the amounts of substance of solid species (C)
 
     y_gas = n_gas / np.sum(n_gas) # array containing gas phase molar fractions of gaseous species
-    #x_sol = n_sol / np.sum(n_sol) # array containing solid phase molar fractions of solid species
+    x_sol = n_sol / np.sum(n_sol) # array containing solid phase molar fractions of solid species
 
     dfgi = dfg(T)              # Gibbs free energy of formation of all species in J / mol
     phii = np.ones_like(n_gas) # default array for fugacity coefficients of gaseous species in 1
@@ -65,7 +65,7 @@ def g_T(n, T, p, type):
     R  = 8.314 # universal gas constant in J / mol K
     p0 = 1 # standard pressure in bar
 
-    res = np.dot(n, dfgi) + R * T * (np.dot(n_gas, np.log(phii * p * y_gas / p0))) #+ np.dot(n_sol, np.log(x_sol)))
+    res = np.dot(n, dfgi) + R * T * (np.dot(n_gas, np.log(phii * p * y_gas / p0)) + np.dot(n_sol, np.log(x_sol)))
     return res
 
 
@@ -341,6 +341,40 @@ def K0(T, reaction):
 
     return K0_T
 
+
+
+"""def K0(T, reaction):
+
+    dfgi = dfg(T)              # Gibbs free energy of formation of all species in J / mol
+    dfg_CO2 = dfgi[0]
+    dfg_H2 = dfgi[1]
+    dfg_CH4 = dfgi[2]
+    dfg_H2O = dfgi[3]
+    dfg_CO = dfgi[4]
+    dfg_C = dfgi[5]
+    dfg_N2 = dfgi[6]
+
+    if reaction == 'CO2 methanation':
+        K0 = np.exp(-(dfg_CH4 + 2 * dfg_H2O - dfg_CO2 - 4 * dfg_H2) / (csts.R * T))
+    elif reaction == 'CO methanation':
+        K0 = np.exp(-(dfg_CH4 + dfg_H2O - dfg_CO - 3 * dfg_H2) / (csts.R * T))
+    elif reaction == 'WGS':
+        K0 = np.exp(-(dfg_CO2 + dfg_H2 - dfg_CO - dfg_H2O) / (csts.R * T))
+    elif reaction == 'Inversed Methane CO2 reforming':
+        K0 = np.exp(-(dfg_CO2 + dfg_CH4 - 2 * dfg_CO - 2 * dfg_H2) / (csts.R * T))
+    elif reaction == 'Boudouard reaction':
+        K0 = np.exp(-(dfg_CO2 + dfg_C - 2 * dfg_CO) / (csts.R * T))
+    elif reaction == 'Methane cracking':
+        K0 = np.exp(-(2 * dfg_H2 + dfg_C - dfg_CH4) / (csts.R * T))
+    elif reaction == 'Carbon monoxide reduction':
+        K0 = np.exp(-(dfg_C + dfg_H2O - dfg_CO - dfg_H2) / (csts.R * T))
+    elif reaction == 'Carbon dioxide reduction':
+        K0 = np.exp(-(dfg_C + 2 * dfg_H2O - dfg_CO2 - 2 * dfg_H2) / (csts.R * T))
+
+    return K0"""
+
+
+
 def check_eq_consts(T, p, y_GG, reaction):
     """
     function calculates the equilibrium constant of the reaction at a given temperature and pressure using Gibbs energy minimization model and Van't Hoff equation
@@ -434,7 +468,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     x_eq_vals = np.zeros([len(guesses),len(x0)])
     n_eq_vals = np.zeros([len(guesses),len(x0)])
     
-    '''for i, guess in enumerate(guesses):
+    for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
@@ -480,9 +514,9 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     if n_eq_vals is not np.nan:
         return p, T, x0, n_eq, success
     else:
-        return np.nan, np.nan, np.nan, np.nan, False'''
+        return np.nan, np.nan, np.nan, np.nan, False
     
-    for i, guess in enumerate(guesses):
+    """for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
@@ -511,7 +545,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
             K0_percentage_deviation = 100 * (K_0_sim - K_0_vantHoff) / K_0_vantHoff
             summed_K0_percentage_deviation += abs(K0_percentage_deviation)
 
-        # check if the equilibrium constants are consistent
+        ## check if the equilibrium constants are consistent
         if T < 300+273.15:
             if summed_K0_percentage_deviation > 2500:
                 x_eq_vals = np.nan
@@ -520,7 +554,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
                 x_eq_vals = np.nan
         else:
             if summed_K0_percentage_deviation > 5000:
-                x_eq_vals = np.nan
+                x_eq_vals = np.nan"""
 
     # return p, T, x0, x_eq if successful else return only NaN
     if x_eq_vals is not np.nan:
