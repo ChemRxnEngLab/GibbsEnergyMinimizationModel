@@ -468,7 +468,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     x_eq_vals = np.zeros([len(guesses),len(x0)])
     n_eq_vals = np.zeros([len(guesses),len(x0)])
     
-    for i, guess in enumerate(guesses):
+    '''for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
@@ -514,9 +514,9 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     if n_eq_vals is not np.nan:
         return p, T, x0, n_eq, success
     else:
-        return np.nan, np.nan, np.nan, np.nan, False
+        return np.nan, np.nan, np.nan, np.nan, False'''
     
-    """for i, guess in enumerate(guesses):
+    for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
@@ -554,7 +554,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
                 x_eq_vals = np.nan
         else:
             if summed_K0_percentage_deviation > 5000:
-                x_eq_vals = np.nan"""
+                x_eq_vals = np.nan
 
     # return p, T, x0, x_eq if successful else return only NaN
     if x_eq_vals is not np.nan:
