@@ -3,7 +3,7 @@ from scipy.optimize import minimize, basinhopping
 from SRK import phi_SRK, phi_SRK_VLE
 import warnings
 from thermo_coeffs import delta_f_G
-from PhaseStability import min_tpd, initial_guesses, min_TPD, check_phase_stability, init_2Ph_calc
+from PhaseStability import min_tpd, initial_guesses, init_2Ph_calc
 
 
 def dfg(T):
@@ -272,7 +272,7 @@ def calc_eq(T, p, x0):
 
     if sol.success:
 
-        print("current T and p", T, p, "(after convergence of g_T one-phase)")
+        #print("current T and p", T, p, "(after convergence of g_T one-phase)")
         
         g_T_value = sol.fun
         n_eq = sol.x
@@ -313,9 +313,9 @@ def calc_eq(T, p, x0):
 
             #print("min_tpd_vals", min_tpd_vals)
 
-            print("T in K", T)
-            print("p in bae", p*1e-5)
-            print("min_tpd", min(min_tpd_vals))
+            #print("T in K", T)
+            #print("p in bae", p*1e-5)
+            #print("min_tpd", min(min_tpd_vals))
             #print("Z value init gas comp", phi_SRK(x_eq, T, p, 'vapor')[1], phi_SRK(x_eq, T, p, 'liquid')[1])
             
             warnings.warn("Phase stability criterion not fulfilled. Check results carefully.")
