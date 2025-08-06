@@ -4,7 +4,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+from TKA_Mo_240503_2_fug_coeff_V1 import phi_Soave
 import warnings
 import scipy.constants as csts
 from scipy.integrate import quad
@@ -74,7 +74,7 @@ def element_balance(n, n0):
     """
     function for checking the element balance as a constraint for the minimization
 
-    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C, He, Ar and N2
+    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C and N2
     :return: residual -> 0
     """
     # element-species matrix (C, O, H, N)
@@ -87,6 +87,26 @@ def element_balance(n, n0):
                   [0, 0, 0, 2]]) # N2
     res = np.matmul(n, A) - np.matmul(n0, A)
     return res
+
+def comp_mole_numbers_to_element_mole_numbers(n):
+    """
+    function for converting the molar amounts of species to the molar amounts of elements
+
+    Args:
+        n (array): molar amounts of species [CO2 H2 CH4 H2O CO C N2]
+    """
+    # element-species matrix (C, O, H, N)
+    A = np.array([[1, 2, 0, 0],  # CO2
+                  [0, 0, 2, 0],  # H2
+                  [1, 0, 4, 0],  # CH4
+                  [0, 1, 2, 0],  # H2O
+                  [1, 1, 0, 0],  # CO
+                  [1, 0, 0, 0],  # C
+                  [0, 0, 0, 2]]) # N2
+    n_elements = np.matmul(n, A)
+    
+    return n_elements
+
 
 def calc_bounds(x0):
     n0      = x0 * 1                            # initial molar amount in mol
@@ -228,7 +248,6 @@ def c_p_R(T, reaction):
     elif reaction == 'Carbon dioxide reduction':
         c_p_R = c_p_C + 2 * c_p_H2O - c_p_CO2 - 2 * c_p_H2
 
-
     return c_p_R
 
 def Thermo_props_ref(reaction):
@@ -322,6 +341,40 @@ def K0(T, reaction):
 
     return K0_T
 
+
+
+"""def K0(T, reaction):
+
+    dfgi = dfg(T)              # Gibbs free energy of formation of all species in J / mol
+    dfg_CO2 = dfgi[0]
+    dfg_H2 = dfgi[1]
+    dfg_CH4 = dfgi[2]
+    dfg_H2O = dfgi[3]
+    dfg_CO = dfgi[4]
+    dfg_C = dfgi[5]
+    dfg_N2 = dfgi[6]
+
+    if reaction == 'CO2 methanation':
+        K0 = np.exp(-(dfg_CH4 + 2 * dfg_H2O - dfg_CO2 - 4 * dfg_H2) / (csts.R * T))
+    elif reaction == 'CO methanation':
+        K0 = np.exp(-(dfg_CH4 + dfg_H2O - dfg_CO - 3 * dfg_H2) / (csts.R * T))
+    elif reaction == 'WGS':
+        K0 = np.exp(-(dfg_CO2 + dfg_H2 - dfg_CO - dfg_H2O) / (csts.R * T))
+    elif reaction == 'Inversed Methane CO2 reforming':
+        K0 = np.exp(-(dfg_CO2 + dfg_CH4 - 2 * dfg_CO - 2 * dfg_H2) / (csts.R * T))
+    elif reaction == 'Boudouard reaction':
+        K0 = np.exp(-(dfg_CO2 + dfg_C - 2 * dfg_CO) / (csts.R * T))
+    elif reaction == 'Methane cracking':
+        K0 = np.exp(-(2 * dfg_H2 + dfg_C - dfg_CH4) / (csts.R * T))
+    elif reaction == 'Carbon monoxide reduction':
+        K0 = np.exp(-(dfg_C + dfg_H2O - dfg_CO - dfg_H2) / (csts.R * T))
+    elif reaction == 'Carbon dioxide reduction':
+        K0 = np.exp(-(dfg_C + 2 * dfg_H2O - dfg_CO2 - 2 * dfg_H2) / (csts.R * T))
+
+    return K0"""
+
+
+
 def check_eq_consts(T, p, y_GG, reaction):
     """
     function calculates the equilibrium constant of the reaction at a given temperature and pressure using Gibbs energy minimization model and Van't Hoff equation
@@ -393,7 +446,15 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     p = p*1e-5 # in bar
 
     n0,bnds,_ = calc_bounds(x0)
-    cons = {'type': 'eq', 'fun': element_balance, 'args': [n0]}
+    cons = [{'type': 'eq', 'fun': element_balance, 'args': [n0]},
+            {'type': 'ineq', 'fun': lambda n: n[0] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[1] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[2] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[3] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[4] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[5] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[6] - 1e-20}]
+    
 
     if round(np.sum(x0),5) != 1:
         ## Warning
@@ -405,7 +466,56 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
 
     g_T_vals = np.zeros(len(guesses))
     x_eq_vals = np.zeros([len(guesses),len(x0)])
+    n_eq_vals = np.zeros([len(guesses),len(x0)])
+    
+    '''for i, guess in enumerate(guesses):
 
+        sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
+
+        if sol.success:
+            g_T_vals[i] = sol.fun
+            n_eq_vals[i, :] = sol.x
+        else:
+            g_T_vals[i] = np.nan
+            n_eq_vals[i, :] = np.nan
+
+    # now find the minimum g_T_value and respective x_eq
+    try:
+        min_idx = np.nanargmin(g_T_vals)
+        n_eq = n_eq_vals[min_idx,:]
+        x_eq = n_eq / np.sum(n_eq)
+        success = True
+    except ValueError:
+        n_eq = np.nan
+        x_eq = np.nan
+        success = False
+
+    if success:
+
+        summed_K0_percentage_deviation = 0
+        # check if the equilibrium constants are consistent
+        for reaction in ['CO2 methanation', 'CO methanation', 'WGS', 'Inversed Methane CO2 reforming', 'Boudouard reaction', 'Methane cracking', 'Carbon monoxide reduction', 'Carbon dioxide reduction']:
+            K_0_sim, K_0_vantHoff = check_eq_consts(T, p*1e5, x_eq, reaction)
+            K0_percentage_deviation = 100 * (K_0_sim - K_0_vantHoff) / K_0_vantHoff
+            summed_K0_percentage_deviation += abs(K0_percentage_deviation)
+
+        # check if the equilibrium constants are consistent
+        if T < 300+273.15:
+            if summed_K0_percentage_deviation > 1500:
+                n_eq_vals = np.nan
+        elif 300+273.15 <= T < 600+273.15:
+            if summed_K0_percentage_deviation > 2500:
+                n_eq_vals = np.nan
+        else:
+            if summed_K0_percentage_deviation > 5000:
+                n_eq_vals = np.nan
+
+    # return p, T, x0, x_eq if successful else return only NaN
+    if n_eq_vals is not np.nan:
+        return p, T, x0, n_eq, success
+    else:
+        return np.nan, np.nan, np.nan, np.nan, False'''
+    
     for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
@@ -435,9 +545,9 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
             K0_percentage_deviation = 100 * (K_0_sim - K_0_vantHoff) / K_0_vantHoff
             summed_K0_percentage_deviation += abs(K0_percentage_deviation)
 
-        # check if the equilibrium constants are consistent
+        ## check if the equilibrium constants are consistent
         if T < 300+273.15:
-            if summed_K0_percentage_deviation > 1500:
+            if summed_K0_percentage_deviation > 2500:
                 x_eq_vals = np.nan
         elif 300+273.15 <= T < 600+273.15:
             if summed_K0_percentage_deviation > 2500:

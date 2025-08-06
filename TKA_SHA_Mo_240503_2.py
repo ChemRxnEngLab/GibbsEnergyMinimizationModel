@@ -40,9 +40,9 @@ def g_T(n, T, p, type):
     :return: total Gibbs free energy in J / mol
     """
 
-    for i in range(n.shape[0]):
-        if n[i] <= 0:
-            n[i] = 1e-20
+    #for i in range(n.shape[0]):
+    #    if n[i] <= 0:
+    #        n[i] = 1e-20
 
     n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO, He, Ar and N2) in mol
     n_sol = n[5] # array containing only the amounts of substance of solid species (C)
@@ -99,7 +99,7 @@ def calc_bounds(x0):
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
     max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_N2))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, np.inf))
     init = np.ones_like(n0)
     
     return n0,bnds,init 
