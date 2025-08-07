@@ -4,7 +4,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+from TKA_Mo_240503_2_fugacity_coefficient_V2_MeOH import phi_Soave
 import warnings
 from thermo_coeffs import delta_f_G
 

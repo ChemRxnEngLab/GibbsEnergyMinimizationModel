@@ -1,4 +1,4 @@
-# TKA_Mo_240503_2_fugacity_coefficient_V2
+# TKA_Mo_240503_2_fugacity_coefficient_V2_MeOH
 # function for calculation of fugacity coefficients according to Soave 1972 (https://doi.org/10.1016/0009-2509(72)80096-4) for mixtures
 # contains CO2, H2, CH4, H2O, CO, He, Ar and N2
 

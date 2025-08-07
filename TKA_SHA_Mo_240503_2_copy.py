@@ -1,4 +1,4 @@
-# Modell TKA_Mo_240503_1_(MethT_V11)
+# Modell TKA_Mo_240503_2_copy
 # calculation of methanation chemical equilibrium by Gibbs energy minimization
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 

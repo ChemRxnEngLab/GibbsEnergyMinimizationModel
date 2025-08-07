@@ -1,10 +1,10 @@
-# Modell TKA_Mo_240503_1_(MethT_V11)
+# Modell TKA_Mo_240503_2
 # calculation of methanation chemical equilibrium by Gibbs energy minimization
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
 
 import numpy as np
 from scipy.optimize import minimize
-from TKA_Mo_240503_2_fugacity_coefficient_V2 import phi_Soave
+from TKA_Mo_240503_2_fug_coeff_V1 import phi_Soave
 import warnings
 
 
@@ -40,11 +40,11 @@ def g_T(n, T, p, type):
     :return: total Gibbs free energy in J / mol
     """
 
-    #for i in range(n.shape[0]):
-    #    if n[i] <= 0:
-    #        n[i] = 1e-20
+    for i in range(n.shape[0]):
+        if n[i] <= 0:
+            n[i] = 1e-20
 
-    n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO, He, Ar and N2) in mol
+    n_gas = np.delete(n, 5)   # array containing only the amounts of substance of gaseous species (CO2, H2, CH4, H2O, CO and N2) in mol
     n_sol = n[5] # array containing only the amounts of substance of solid species (C)
 
     y_gas = n_gas / np.sum(n_gas) # array containing gas phase molar fractions of gaseous species
@@ -72,10 +72,10 @@ def element_balance(n, n0):
     """
     function for checking the element balance as a constraint for the minimization
 
-    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C, He, Ar and N2
+    :param n0: vector containing initial molar amounts of CO2, H2, CH4, H2O, CO, C and N2
     :return: residual -> 0
     """
-    # element-species matrix (C, O, H, He, Ar, N)
+    # element-species matrix (C, O, H, N)
     A = np.array([[1, 2, 0, 0],  # CO2
                   [0, 0, 2, 0],  # H2
                   [1, 0, 4, 0],  # CH4
