@@ -122,8 +122,8 @@ def equilibrium_composition_methanation(T,p,x0,type='ideal gas'):
     T = np.atleast_1d(T)
     p = np.atleast_1d(p)*1e-5 # in bar
 
-    if x0.shape[0] < 9:
-        for __ in range(9-len(x0)):
+    if x0.shape[0] < 7:
+        for __ in range(7-len(x0)):
             x0 = np.append(x0,1e-20)
 
     n0,bnds,init = calc_bounds(x0)
