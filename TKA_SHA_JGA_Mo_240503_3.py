@@ -517,6 +517,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     else:
         return np.nan, False
     
+    
 def calc_eq_methanation_x(T,p,x0,type='real gas'):
     '''
     Calculates the equilibrium composition of a gas mixture at one given temperature and pressure.
