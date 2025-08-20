@@ -10,26 +10,51 @@ import matplotlib
 ## import the model
 from TKA_SHA_JGA_Mo_240503_3 import calc_eq_methanation
 
+comps = np.array(['CO2','H2','CH4','H2O','CO','C','N2'])
 
 ## EQ calculation
-def methanation_equilibrium(T,p,n0,gas_type='real'):
+def methanation_equilibrium(T_arr,p_arr,n0,gas_type='real gas'):
+    '''
+    Calculation of equilibrium composition at different temperatures (T_arr) and pressures (p_arr) for given initial molar amounts n0.
+    Parameters:
+    -----------
+        T_arr: ND-array
+        p_arr: ND-array
+        n0: ND-array, shape: (7,)
+    Returns:
+    --------
+        results: pd.DataFrame
+            Containing T,p, n0, the equilibrium molar amounts and the success status of each calculation
+    '''
+    print('Evaluating methanation equilibrium...')
     results = pd.DataFrame()
-    n_eq = np.empty((len(T),len(n0)))
-    x_eq = np.empty((len(T),len(n0)))
-    success = []
     not_converged = 0
-    for TT in range(len(T)):
-        n_eq_temp,success_temp = calc_eq_methanation(T[TT],p[0],n0,type=gas_type)   # guess=guess  
-        if success_temp:
-            n_eq[TT,:] = n_eq_temp
-            x_eq[TT,:] = n_eq_temp/np.sum(n_eq_temp)
-        else:  
-            n_eq[TT,:] = np.nan
-            x_eq[TT,:] = np.nan
-        success.append(success_temp)
-        if success_temp == False:
-            not_converged +=1
-    print(f'\nConverged calculations: {(len(T)-not_converged)/len(T):.0%} ({len(T) - not_converged}/{len(T)})')
+    for p in p_arr:
+        for T in T_arr:
+            n_eq,success = calc_eq_methanation(T,p,n0,type=gas_type)
+
+            if success:
+                x_eq = n_eq/sum(n_eq)
+            else:
+                n_eq = np.full_like(n0,np.nan)
+                x_eq = np.full_like(n0,np.nan)
+                not_converged +=1
+
+            results_df = pd.DataFrame({
+                'temperature': [T],
+                'pressure': [p],
+                'success': [success]
+                }, 
+                index=[0])
+            for i,comp in enumerate(comps):
+                results_df[f'n0_{comp}'] = n0[i]
+                results_df[f'n_eq_{comp}'] = n_eq[i]
+                results_df[f'x_eq_{comp}'] = x_eq[i]
+
+            ## Fill dataframe
+            results = pd.concat((results,results_df))
+                
+    print(f'\nConverged calculations: {(len(T_arr)-not_converged)/len(T_arr):.0%} ({len(T_arr) - not_converged}/{len(T_arr)})\n')
 
     return results
 
@@ -43,7 +68,7 @@ if __name__ == '__main__':
     gas_type = 'real gas' # choose type of gas from 'ideal gas' and 'real gas'
 
     # Parameter
-    n0 = np.empty(7)
+    n0 = np.full((7,),1e-20)
     n0[0] = 0.2       # initial mole fraction of CO2
     n0[1] = 0.8-7e-20 # initial mole fraction of H2
     n0[2] = 1e-20     # initial mole fraction of CH4
@@ -53,16 +78,9 @@ if __name__ == '__main__':
     n0[6] = 1e-20     # initial mole fraction of N2
 
     ## EQ calculation
+    results = methanation_equilibrium(T_arr=T,p_arr=p,n0=n0,gas_type=gas_type)
 
-
-    ## data import - validation data
-    csv_data_Gao = pd.read_csv(r'data_Gao_CO2.csv',  # read csv file
-                                sep = ';')
-    ## convert read data into numpy array
-    data_Gao         = csv_data_Gao.to_numpy()
-
-    T_CO2_Gao        = data_Gao[:, 0]
-    x_CO2_Gao        = data_Gao[:, 1:7]
+    
 
     # plt.style.use('ICIWstyle')
     font = {'size': 10}
@@ -71,15 +89,13 @@ if __name__ == '__main__':
     ## CO2 methanation
     fig, axs = plt.subplots()
 
-    axs.plot(T - 273.15,  x_eq[:, 0],     '-',                 label = 'CO$_2$')
-    axs.plot(T - 273.15,  x_eq[:, 1],     '-',                 label = 'H$_2$')
-    axs.plot(T - 273.15,  x_eq[:, 2],     '-',                 label = 'CH$_4$')
-    axs.plot(T - 273.15,  x_eq[:, 3],     '-',                 label = 'H$_2$O')
-    axs.plot(T - 273.15,  x_eq[:, 4],     '-',                 label = 'CO')
-    axs.plot(T - 273.15,  x_eq[:, 5],     '-',                 label = 'C')
-    axs.plot(T - 273.15,  x_eq[:, 6],     '-',                 label = 'He')
-    #axs.plot(T - 273.15,  x[:, 7],     '-',                 label = 'Ar')
-    #axs.plot(T - 273.15,  x[:, 8],     '-',                 label = 'N$_2$')
+    axs.plot(T - 273.15,  results['x_eq_CO2'].values,     '-',                 label = 'CO$_2$')
+    axs.plot(T - 273.15,  results['x_eq_H2'].values,     '-',                 label = 'H$_2$')
+    axs.plot(T - 273.15,  results['x_eq_CH4'].values,     '-',                 label = 'CH$_4$')
+    axs.plot(T - 273.15,  results['x_eq_H2O'].values,     '-',                 label = 'H$_2$O')
+    axs.plot(T - 273.15,  results['x_eq_CO'].values,     '-',                 label = 'CO')
+    axs.plot(T - 273.15,  results['x_eq_C'].values,     '-',                 label = 'C')
+    axs.plot(T - 273.15,  results['x_eq_N2'].values,     '-',                 label = 'N2')
     axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 0], 'o', markersize = 3, label = 'CO$_2$ (Gao)')
     axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 1], 'o', markersize = 3, label = 'H$_2$ (Gao)')
     axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 2], 'o', markersize = 3, label = 'CH$_4$ (Gao)')

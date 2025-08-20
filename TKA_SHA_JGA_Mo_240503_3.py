@@ -515,7 +515,7 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     if n_eq_vals is not np.nan:
         return n_eq, success
     else:
-        return np.nan, False
+        return np.full_like(n0,np.nan), False
     
     
 def calc_eq_methanation_x(T,p,x0,type='real gas'):
