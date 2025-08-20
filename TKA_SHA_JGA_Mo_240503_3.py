@@ -467,10 +467,9 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
     guesses = [x0, np.ones_like(x0), random_guess]
 
     g_T_vals = np.zeros(len(guesses))
-    x_eq_vals = np.zeros([len(guesses),len(x0)])
     n_eq_vals = np.zeros([len(guesses),len(x0)])
     
-    '''for i, guess in enumerate(guesses):
+    for i, guess in enumerate(guesses):
 
         sol = minimize(g_T, guess, args=(T, p, type), method='SLSQP', constraints = cons, bounds=bnds, options = {'disp': False, 'maxiter': 1000, 'ftol': 1e-5})
 
@@ -512,11 +511,53 @@ def calc_eq_methanation(T,p,x0,type='real gas'):
             if summed_K0_percentage_deviation > 5000:
                 n_eq_vals = np.nan
 
-    # return p, T, x0, x_eq if successful else return only NaN
+    ## return n_eq if successful else return only NaN
     if n_eq_vals is not np.nan:
-        return p, T, x0, n_eq, success
+        return n_eq, success
     else:
-        return np.nan, np.nan, np.nan, np.nan, False'''
+        return np.nan, False
+    
+def calc_eq_methanation_x(T,p,x0,type='real gas'):
+    '''
+    Calculates the equilibrium composition of a gas mixture at one given temperature and pressure.
+
+    Parameters
+    ----------
+        T: temperature in K (float)
+        p: pressure in Pa (float)
+        x0: inlet composition [CO2 H2 CH4 H2O CO C N2]
+        guess: initial guess for the equilibrium composition for the minimization
+        type: type of gas, choose from 'ideal gas' or 'real gas'
+
+    Returns
+    -------
+        x_eq: equilibrium composition [CO2 H2 CH4 H2O CO C N2]
+        success: boolean, True if the minimization was successful, False otherwise
+
+    '''
+    p = p*1e-5 # in bar
+
+    n0,bnds,_ = calc_bounds(x0)
+    cons = [{'type': 'eq', 'fun': element_balance, 'args': [n0]},
+            {'type': 'ineq', 'fun': lambda n: n[0] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[1] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[2] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[3] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[4] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[5] - 1e-20},
+            {'type': 'ineq', 'fun': lambda n: n[6] - 1e-20}]
+    
+
+    if round(np.sum(x0),5) != 1:
+        ## Warning
+        warnings.warn(f'WARNING: Please check inlet composition! Sum of x_i is not one but {np.sum(x0)} !')
+
+    # use 3 different guesses for the minimization
+    random_guess = np.random.dirichlet((1, 1, 1, 1, 1, 1, 1), 1)[0]
+    guesses = [x0, np.ones_like(x0), random_guess]
+
+    g_T_vals = np.zeros(len(guesses))
+    x_eq_vals = np.zeros([len(guesses),len(x0)])
     
     for i, guess in enumerate(guesses):
 
