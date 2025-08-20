@@ -1,6 +1,8 @@
-# Modell TKA_Mo_240503_2_copy
+# Modell TKA_SHA_JGA_Mo_240503_3.py 
 # calculation of methanation chemical equilibrium by Gibbs energy minimization
 # calculation of fugacity coefficients by Soave-Redlich-Kwong EOS or ideal gas assumption
+# Extension of TKA_SHA_Mo_240503_2 with verification of simulation result 
+# by comparison with equilibrium constants cacluated by Shomate equation
 
 import numpy as np
 from scipy.optimize import minimize
