@@ -10,18 +10,18 @@ def phi_Soave(y, T, p):
     """
     function for calculation of fugacity coefficients @ T, p from Soave-Redlich-Kwong-equation of state according to 1972 (doi.org/10.1016/0009-2509(72)80096-4)
 
-    :param y: array containing molar fractions in gas phase of CO2, H2, CH4, H2O, CO, He, Ar and N2 in 1
+    :param y: array containing molar fractions in gas phase of CO2, H2, CH4, H2O, CO and N2 in 1
     :param T: temperature in K
     :param p: pressure in Pa
-    :return: fugacity coefficients of CO2, H2, CH4, H2O, CO, He, Ar and N2 @ T, p in 1
+    :return: fugacity coefficients of CO2, H2, CH4, H2O, CO and N2 @ T, p in 1
     """
 
     y_i   = y # array of gas phase molar fractions (CO2, H2, CH4, H2O, CO, He, Ar and N2) in 1
 
-    # Parameter         # CO2   # H2    # CH4    # H2O   # CO    # He    # Ar    # N2
-    omega_i = np.array([ 0.224, -0.215,   0.011,  0.343,  0.048, -0.388,      0, 0.037]) # array containing acentric factors in 1 (Perry's)
-    T_c_i   = np.array([304.21,  33.19, 190.564, 647.13, 132.92,    5.2, 150.86, 126.2]) # array contaning critical temperatures in K (Perry's)
-    p_c_i   = np.array([  73.9,   13.2,    45.9,  219.4,   34.9,    2.3,   49.0,  33.9]) * 1e5 # array containing critical pressures in Pa (Perry's)
+    # Parameter         # CO2   # H2    # CH4    # H2O   # CO    # N2
+    omega_i = np.array([ 0.224, -0.215,   0.011,  0.343,  0.048, 0.037])      # array containing acentric factors in 1 (Perry's)
+    T_c_i   = np.array([304.21,  33.19, 190.564, 647.13, 132.92, 126.2])      # array contaning critical temperatures in K (Perry's)
+    p_c_i   = np.array([  73.9,   13.2,    45.9,  219.4,   34.9, 33.9]) * 1e5 # array containing critical pressures in Pa (Perry's)
     # Green, Don W.; Perry, Robert H. (2003): Perry's chemical engineers' handbook. 7th ed., internat. ed., [Nachdr.]. New York: McGraw-Hill.
 
     T_r_i = T / T_c_i                                      # array containing reduced temperatures in 1
