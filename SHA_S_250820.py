@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import pandas as pd
 from ICIW_Plots import cyclers as ICIW_cyclers
+plt.style.use(['ICIWstyle'])
 import matplotlib
 
 ## import the model
@@ -80,7 +81,15 @@ if __name__ == '__main__':
     ## EQ calculation
     results = methanation_equilibrium(T_arr=T,p_arr=p,n0=n0,gas_type=gas_type)
 
-    
+    ## data import - validation data
+    csv_data_Gao = pd.read_csv(
+        r'data_Gao_CO2.csv',  # read csv file
+        sep = ';')
+    ## convert read data into numpy array
+    data_Gao = csv_data_Gao.to_numpy()
+
+    T_CO2_Gao = data_Gao[:, 0]
+    x_CO2_Gao = data_Gao[:, 1:7]
 
     # plt.style.use('ICIWstyle')
     font = {'size': 10}
