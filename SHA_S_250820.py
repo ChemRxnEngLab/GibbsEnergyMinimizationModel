@@ -9,7 +9,7 @@ plt.style.use(['ICIWstyle'])
 import matplotlib
 
 ## import the model
-from TKA_SHA_JGA_Mo_240503_3 import calc_eq_methanation
+from TKA_SHA_JGA_Mo_240503_4 import calc_eq_methanation
 
 comps = np.array(['CO2','H2','CH4','H2O','CO','C','N2'])
 
