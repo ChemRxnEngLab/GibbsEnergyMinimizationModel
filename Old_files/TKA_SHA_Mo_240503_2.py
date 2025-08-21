@@ -97,9 +97,9 @@ def calc_bounds(x0):
     max_CH4 = min(max_C, 0.25 * max_H)          # maximum possible molar amount of CH4 in mol
     max_H2O = min(0.5 * max_H, max_O)           # maximum possible molar amount of H2O in mol
     max_CO  = min(max_C, max_O)                 # maximum possible molar amount of CO in mol
-    max_N2  = 0.5 * max_N                       # maximum possible molar amount of N2 in mol
+    max_N2  = 0.5 * max_N #was0.5               # maximum possible molar amount of N2 in mol
 
-    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, np.inf))
+    bnds = ((0, max_CO2), (0, max_H2), (0, max_CH4), (0, max_H2O), (0, max_CO), (0, max_C), (0, max_N2)) # was np.inf instead of max_N2
     init = np.ones_like(n0)
     
     return n0,bnds,init 
