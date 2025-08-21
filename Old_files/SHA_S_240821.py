@@ -10,17 +10,17 @@ from ICIW_Plots import cyclers as ICIW_cyclers
 import matplotlib
 
 ## import the model (MethT_V11)
-from TKA_SHA_Mo_240503_2 import equilibrium_composition_methanation,calc_eq_methanation
+from TKA_SHA_Mo_240503_2 import calc_eq_methanation
 
 ## Test the model by verification with data from Gao
 
 ## validation (Gao 2012, https://doi.org/10.1039/C2RA00632D)
-p = np.array([1*1.01325])*1e5 # p in Pa
+p = np.array([1*1.01325, 2])*1e5 # p in Pa
 T = np.linspace(200 + 273.15, 800 + 273.15, 100) # T in K
 type = 'real gas' # choose type of gas from 'ideal gas' and 'real gas'
 
 # Parameter
-x0 = np.empty(9)
+x0 = np.empty(7)
 x0[0] = 0.2       # initial mole fraction of CO2
 x0[1] = 0.8-7e-20 # initial mole fraction of H2
 x0[2] = 1e-20     # initial mole fraction of CH4
@@ -28,19 +28,19 @@ x0[3] = 1e-20     # initial mole fraction of H2O
 x0[4] = 1e-20     # initial mole fraction of CO
 x0[5] = 1e-20     # initial mole fraction of C
 x0[6] = 1e-20     # initial mole fraction of He
-x0[7] = 1e-20     # initial mole fraction of Ar
-x0[8] = 1e-20     # initial mole fraction of N2
+#x0[7] = 1e-20     # initial mole fraction of Ar
+#x0[8] = 1e-20     # initial mole fraction of N2
 
 ## Old calculation
 # x,n = equilibrium_composition_methanation(T,p,x0,type=type)
 
 ## New calculation
-x_eq = np.empty((len(T),9))
+x_eq = np.empty((len(T),7))
 success = []
 not_converged = 0
 guess = x0
 for TT in range(len(T)):
-    x_eq_temp,success_temp = calc_eq_methanation(T[TT],p[0],x0,guess=guess,type=type)    
+    x_eq_temp,success_temp,_ = calc_eq_methanation(T[TT],p[0],x0,type=type)   # guess=guess  
     if success_temp:
         x_eq[TT,:] = x_eq_temp
         guess = x_eq_temp
@@ -54,9 +54,8 @@ print(f'\nConverged calculations: {(len(T)-not_converged)/len(T):.0%} ({len(T) -
 
 
 ## data import - validation data
-csv_data_Gao = pd.read_csv(r'data_Gao_CO2.csv',  # read csv file
+csv_data_Gao = pd.read_csv(r'gibbsenergyminimizationmodel/data_Gao_CO2.csv',  # read csv file
                             sep = ';')
-
 ## convert read data into numpy array
 data_Gao         = csv_data_Gao.to_numpy()
 
@@ -77,8 +76,8 @@ axs.plot(T - 273.15,  x[:, 3],     '-',                 label = 'H$_2$O')
 axs.plot(T - 273.15,  x[:, 4],     '-',                 label = 'CO')
 axs.plot(T - 273.15,  x[:, 5],     '-',                 label = 'C')
 axs.plot(T - 273.15,  x[:, 6],     '-',                 label = 'He')
-axs.plot(T - 273.15,  x[:, 7],     '-',                 label = 'Ar')
-axs.plot(T - 273.15,  x[:, 8],     '-',                 label = 'N$_2$')
+#axs.plot(T - 273.15,  x[:, 7],     '-',                 label = 'Ar')
+#axs.plot(T - 273.15,  x[:, 8],     '-',                 label = 'N$_2$')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 0], 'o', markersize = 3, label = 'CO$_2$ (Gao)')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 1], 'o', markersize = 3, label = 'H$_2$ (Gao)')
 axs.plot(T_CO2_Gao,   x_CO2_Gao[:, 2], 'o', markersize = 3, label = 'CH$_4$ (Gao)')
